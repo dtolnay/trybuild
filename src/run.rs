@@ -107,17 +107,19 @@ impl Runner {
             Dependency {
                 version: None,
                 path: Some(manifest_dir.clone()),
-                features: Vec::new(),
+                rest: Map::new(),
             },
         );
 
-        // If your test cases require additional dependencies, I guess add them
-        // here.
-        //
-        // TODO: Maybe expose additional dependencies as an API on TestCases:
-        //
-        //     t.dependency("serde", "1.0");
-        //
+        for (depname, dependency) in &self.deps {
+            manifest.dependencies.insert(
+                depname.clone(),
+                Dependency {
+                    path: dependency.path.as_ref().map(|path| manifest_dir.join(path)),
+                    ..dependency.clone()
+                },
+            );
+        }
 
         manifest.bins.push(Bin {
             name: project.name.to_owned(),

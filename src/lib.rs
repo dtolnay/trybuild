@@ -12,14 +12,18 @@ mod message;
 mod normalize;
 mod run;
 
+use crate::manifest::Dependency;
 use std::cell::RefCell;
+use std::collections::BTreeMap as Map;
 use std::path::{Path, PathBuf};
+use std::thread;
 
 pub struct TestCases {
     runner: RefCell<Runner>,
 }
 
 struct Runner {
+    deps: Map<String, Dependency>,
     tests: Vec<Test>,
 }
 
@@ -39,7 +43,17 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner {
+                deps: Map::new(),
+                tests: Vec::new(),
+            }),
+        }
+    }
+
+    pub fn dependencies(&self, dependencies: &str) {
+        match toml::from_str::<Map<String, Dependency>>(dependencies) {
+            Ok(deps) => self.runner.borrow_mut().deps.extend(deps),
+            Err(error) => panic!("{}", error),
         }
     }
 
@@ -60,6 +74,8 @@ impl TestCases {
 
 impl Drop for TestCases {
     fn drop(&mut self) {
-        self.runner.borrow_mut().run();
+        if !thread::panicking() {
+            self.runner.borrow_mut().run();
+        }
     }
 }
