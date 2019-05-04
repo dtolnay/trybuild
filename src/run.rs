@@ -107,14 +107,16 @@ impl Runner {
             .map(PathBuf::from)
             .ok_or(Error::ProjectDir)?;
 
-        manifest.dependencies.insert(
-            crate_name,
-            Dependency {
-                version: None,
-                path: Some(manifest_dir.clone()),
-                rest: Map::new(),
-            },
-        );
+        if self.deps.is_empty() {
+            manifest.dependencies.insert(
+                crate_name,
+                Dependency {
+                    version: None,
+                    path: Some(manifest_dir.clone()),
+                    rest: Map::new(),
+                },
+            );
+        }
 
         for (depname, dependency) in &self.deps {
             manifest.dependencies.insert(
