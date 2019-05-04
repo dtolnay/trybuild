@@ -288,9 +288,11 @@ struct ExpandedTest {
 
 fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
-        glob::glob(pattern)?
+        let mut paths = glob::glob(pattern)?
             .map(|entry| entry.map_err(Error::from))
-            .collect()
+            .collect::<Result<Vec<PathBuf>>>()?;
+        paths.sort();
+        Ok(paths)
     }
 
     fn bin_name(i: usize) -> Name {
