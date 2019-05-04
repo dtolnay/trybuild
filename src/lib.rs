@@ -23,11 +23,13 @@ struct Runner {
     tests: Vec<Test>,
 }
 
+#[derive(Clone)]
 struct Test {
     path: PathBuf,
     expected: Expected,
 }
 
+#[derive(Copy, Clone)]
 enum Expected {
     Pass,
     CompileFail,

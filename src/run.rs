@@ -22,7 +22,9 @@ pub struct Project {
 
 impl Runner {
     pub fn run(&mut self) {
-        let project = self.prepare().unwrap_or_else(|err| {
+        let tests = expand_globs(&self.tests);
+
+        let project = self.prepare(&tests).unwrap_or_else(|err| {
             message::prepare_fail(err);
             panic!("tests failed");
         });
@@ -30,12 +32,13 @@ impl Runner {
         println!();
         banner::colorful();
 
+        let len = tests.len();
         let mut failures = 0;
 
-        if self.tests.is_empty() {
+        if tests.is_empty() {
             message::no_tests_enabled();
         } else {
-            for test in &self.tests {
+            for test in tests {
                 if let Err(err) = test.run(&project) {
                     failures += 1;
                     message::test_fail(err);
@@ -47,11 +50,11 @@ impl Runner {
         println!();
 
         if failures > 0 {
-            panic!("{} of {} tests failed", failures, self.tests.len());
+            panic!("{} of {} tests failed", failures, len);
         }
     }
 
-    fn prepare(&self) -> Result<Project> {
+    fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
         let target_dir = cargo::target_dir()?;
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
@@ -64,7 +67,7 @@ impl Runner {
             name: format!("{}-tests", crate_name),
         };
 
-        let manifest = self.make_manifest(crate_name, &project)?;
+        let manifest = self.make_manifest(crate_name, &project, tests)?;
         let manifest_toml = toml::to_string(&manifest)?;
 
         let config = self.make_config();
@@ -80,7 +83,12 @@ impl Runner {
         Ok(project)
     }
 
-    fn make_manifest(&self, crate_name: String, project: &Project) -> Result<Manifest> {
+    fn make_manifest(
+        &self,
+        crate_name: String,
+        project: &Project,
+        tests: &[ExpandedTest],
+    ) -> Result<Manifest> {
         let mut manifest = Manifest {
             package: Package {
                 name: project.name.clone(),
@@ -119,11 +127,13 @@ impl Runner {
             path: Path::new("main.rs").to_owned(),
         });
 
-        for test in &self.tests {
-            manifest.bins.push(Bin {
-                name: test.name(),
-                path: manifest_dir.join(&test.path),
-            });
+        for expanded in tests {
+            if expanded.error.is_none() {
+                manifest.bins.push(Bin {
+                    name: expanded.test.name(),
+                    path: manifest_dir.join(&expanded.test.path),
+                });
+            }
         }
 
         Ok(manifest)
@@ -222,8 +232,71 @@ impl Test {
 }
 
 fn check_exists(path: &Path) -> Result<()> {
+    if path.exists() {
+        return Ok(());
+    }
     match File::open(path) {
         Ok(_) => Ok(()),
         Err(err) => Err(Error::Open(path.to_owned(), err)),
+    }
+}
+
+struct ExpandedTest {
+    test: Test,
+    error: Option<Error>,
+}
+
+fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
+    fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
+        glob::glob(pattern)?
+            .map(|entry| entry.map_err(Error::from))
+            .collect()
+    }
+
+    let mut expanded = Vec::new();
+
+    for test in tests {
+        if let Some(utf8) = test.path.to_str() {
+            if utf8.contains('*') {
+                match glob(utf8) {
+                    Ok(paths) => {
+                        for path in paths {
+                            expanded.push(ExpandedTest {
+                                test: Test {
+                                    path,
+                                    expected: test.expected,
+                                },
+                                error: None,
+                            });
+                        }
+                    }
+                    Err(error) => {
+                        expanded.push(ExpandedTest {
+                            test: test.clone(),
+                            error: Some(error),
+                        });
+                    }
+                }
+                continue;
+            }
+        }
+        expanded.push(ExpandedTest {
+            test: test.clone(),
+            error: None,
+        });
+    }
+
+    expanded
+}
+
+impl ExpandedTest {
+    fn run(self, project: &Project) -> Result<()> {
+        match self.error {
+            None => self.test.run(project),
+            Some(error) => {
+                message::begin_test(&self.test);
+                Err(error)
+            }
+        }
     }
 }

@@ -1,3 +1,4 @@
+use glob::{GlobError, PatternError};
 use std::env;
 use std::fmt::{self, Display};
 use std::io;
@@ -7,10 +8,12 @@ use std::path::PathBuf;
 pub enum Error {
     Cargo(io::Error),
     CargoFail,
+    Glob(GlobError),
     Io(io::Error),
     Metadata(serde_json::Error),
     Mismatch,
     Open(PathBuf, io::Error),
+    Pattern(PatternError),
     PkgName(env::VarError),
     ProjectDir,
     ReadStderr(io::Error),
@@ -31,10 +34,12 @@ impl Display for Error {
         match self {
             Cargo(e) => write!(f, "failed to execute cargo: {}", e),
             CargoFail => write!(f, "cargo reported an error"),
+            Glob(e) => write!(f, "{}", e),
             Io(e) => write!(f, "{}", e),
             Metadata(e) => write!(f, "failed to read cargo metadata: {}", e),
             Mismatch => write!(f, "compiler error does not match expected error"),
             Open(path, e) => write!(f, "{}: {}", path.display(), e),
+            Pattern(e) => write!(f, "{}", e),
             PkgName(e) => write!(f, "failed to detect CARGO_PKG_NAME: {}", e),
             ProjectDir => write!(f, "failed to determine name of project dir"),
             ReadStderr(e) => write!(f, "failed to read stderr file: {}", e),
@@ -56,6 +61,18 @@ impl Error {
             CargoFail | Mismatch | RunFailed | ShouldNotHaveCompiled => true,
             _ => false,
         }
+    }
+}
+
+impl From<GlobError> for Error {
+    fn from(err: GlobError) -> Self {
+        Error::Glob(err)
+    }
+}
+
+impl From<PatternError> for Error {
+    fn from(err: PatternError) -> Self {
+        Error::Pattern(err)
     }
 }
 
