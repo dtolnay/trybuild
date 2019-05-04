@@ -16,6 +16,7 @@ fn try_get(manifest_dir: &Path) -> Result<Map<String, Dependency>> {
 
     let mut dependencies = manifest.dependencies;
     dependencies.extend(manifest.dev_dependencies);
+    dependencies.remove("trybuild");
 
     for dep in dependencies.values_mut() {
         dep.path = dep.path.as_ref().map(|path| manifest_dir.join(path));
