@@ -7,12 +7,10 @@ use std::path::{Path, PathBuf};
 use super::{Expected, Runner, Test};
 use crate::banner;
 use crate::cargo;
-use crate::dependencies;
+use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
-use crate::manifest::{
-    Bin, Build, Config, Dependency, Edition, Manifest, Name, Package, Workspace,
-};
+use crate::manifest::{Bin, Build, Config, Edition, Manifest, Name, Package, Workspace};
 use crate::message;
 use crate::normalize;
 
