@@ -18,6 +18,7 @@ const IGNORED_LINTS: &[&str] = &["dead_code"];
 
 pub struct Project {
     pub dir: PathBuf,
+    source_dir: PathBuf,
     pub target_dir: PathBuf,
     pub name: String,
     update: Update,
@@ -72,8 +73,13 @@ impl Runner {
             }
         }
 
+        let source_dir = env::var_os("CARGO_MANIFEST_DIR")
+            .map(PathBuf::from)
+            .ok_or(Error::ProjectDir)?;
+
         let project = Project {
             dir: path!(target_dir / "tests" / crate_name),
+            source_dir,
             target_dir,
             name: format!("{}-tests", crate_name),
             update: Update::env()?,
@@ -115,22 +121,18 @@ impl Runner {
             workspace: Some(Workspace {}),
         };
 
-        let manifest_dir = env::var_os("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
-            .ok_or(Error::ProjectDir)?;
-
         manifest.dependencies.insert(
             crate_name,
             Dependency {
                 version: None,
-                path: Some(manifest_dir.clone()),
+                path: Some(project.source_dir.clone()),
                 rest: Map::new(),
             },
         );
 
         manifest
             .dependencies
-            .extend(dependencies::get(&manifest_dir));
+            .extend(dependencies::get(&project.source_dir));
 
         manifest.bins.push(Bin {
             name: Name(project.name.to_owned()),
@@ -141,7 +143,7 @@ impl Runner {
             if expanded.error.is_none() {
                 manifest.bins.push(Bin {
                     name: expanded.name.clone(),
-                    path: manifest_dir.join(&expanded.test.path),
+                    path: project.source_dir.join(&expanded.test.path),
                 });
             }
         }
@@ -173,6 +175,7 @@ impl Test {
         let success = output.status.success();
         let mut stderr = normalize::diagnostics(output.stderr);
         stderr = stderr.replace(&name.0, "$CRATE");
+        stderr = stderr.replace(project.source_dir.to_string_lossy().as_ref(), "$DIR");
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
