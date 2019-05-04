@@ -19,8 +19,8 @@ pub fn diagnostics(output: Vec<u8>) -> String {
     let mut normalized = String::new();
 
     for line in from_bytes.lines() {
-        if keep(line) {
-            normalized += line;
+        if let Some(line) = filter(line) {
+            normalized += &line;
             if !normalized.ends_with("\n\n") {
                 normalized.push('\n');
             }
@@ -30,18 +30,21 @@ pub fn diagnostics(output: Vec<u8>) -> String {
     trim(normalized)
 }
 
-fn keep(line: &str) -> bool {
+fn filter(line: &str) -> Option<String> {
     if line.trim_start().starts_with("--> ") {
-        return false;
+        if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
+            let cut_start = line.find('>').unwrap() + 2;
+            return Some(line[..cut_start].to_owned() + "$DIR/" + &line[cut_end + 1..]);
+        }
     }
 
     if line == "error: aborting due to previous error" {
-        return false;
+        return None;
     }
 
     if line == "To learn more, run the command again with --verbose." {
-        return false;
+        return None;
     }
 
-    true
+    Some(line.to_owned())
 }
