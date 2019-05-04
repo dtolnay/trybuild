@@ -87,7 +87,7 @@ pub(crate) fn should_not_have_compiled() {
     println!();
 }
 
-pub(crate) fn write_stderr(wip_path: &Path, stderr_path: &Path, stderr: &str) {
+pub(crate) fn write_stderr_wip(wip_path: &Path, stderr_path: &Path, stderr: &str) {
     let wip_path = wip_path.to_string_lossy();
     let stderr_path = stderr_path.to_string_lossy();
 
@@ -101,6 +101,23 @@ pub(crate) fn write_stderr(wip_path: &Path, stderr_path: &Path, stderr: &str) {
         "Move this file to `{}` to accept it as correct.",
         stderr_path,
     );
+    term::color(Yellow);
+    banner::dotted();
+    print!("{}", stderr);
+    banner::dotted();
+    term::reset();
+    println!();
+}
+
+pub(crate) fn overwrite_stderr(stderr_path: &Path, stderr: &str) {
+    let stderr_path = stderr_path.to_string_lossy();
+
+    term::bold_color(Yellow);
+    println!("wip");
+    println!();
+    print!("NOTE");
+    term::reset();
+    println!(": writing the following output to `{}`.", stderr_path);
     term::color(Yellow);
     banner::dotted();
     print!("{}", stderr);

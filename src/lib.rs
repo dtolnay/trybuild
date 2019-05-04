@@ -6,6 +6,7 @@ mod path;
 
 mod banner;
 mod cargo;
+mod env;
 mod error;
 mod manifest;
 mod message;

@@ -1,5 +1,6 @@
 use glob::{GlobError, PatternError};
 use std::env;
+use std::ffi::OsString;
 use std::fmt::{self, Display};
 use std::io;
 use std::path::PathBuf;
@@ -20,6 +21,7 @@ pub enum Error {
     RunFailed,
     ShouldNotHaveCompiled,
     Toml(toml::ser::Error),
+    UpdateVar(OsString),
     WriteStderr(io::Error),
 }
 
@@ -48,6 +50,11 @@ impl Display for Error {
                 write!(f, "expected test case to fail to compile, but it succeeded")
             }
             Toml(e) => write!(f, "{}", e),
+            UpdateVar(var) => write!(
+                f,
+                "unrecognized value of TRYCOMPILE_UPDATE: {:?}",
+                var.to_string_lossy(),
+            ),
             WriteStderr(e) => write!(f, "failed to write stderr file: {}", e),
         }
     }

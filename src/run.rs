@@ -7,8 +7,11 @@ use std::path::{Path, PathBuf};
 use super::{Expected, Runner, Test};
 use crate::banner;
 use crate::cargo;
+use crate::env::Update;
 use crate::error::{Error, Result};
-use crate::manifest::{Bin, Build, Config, Dependency, Edition, Manifest, Name, Package, Workspace};
+use crate::manifest::{
+    Bin, Build, Config, Dependency, Edition, Manifest, Name, Package, Workspace,
+};
 use crate::message;
 use crate::normalize;
 
@@ -18,6 +21,7 @@ pub struct Project {
     pub dir: PathBuf,
     pub target_dir: PathBuf,
     pub name: String,
+    pub update: Update,
 }
 
 impl Runner {
@@ -62,6 +66,7 @@ impl Runner {
             dir: path!(target_dir / "tests" / crate_name),
             target_dir,
             name: format!("{}-tests", crate_name),
+            update: Update::env()?,
         };
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;
@@ -193,7 +198,7 @@ impl Test {
 
     fn check_compile_fail(
         &self,
-        _project: &Project,
+        project: &Project,
         _name: &Name,
         success: bool,
         stderr: String,
@@ -205,28 +210,46 @@ impl Test {
         }
 
         let stderr_path = self.path.with_extension("stderr");
+
         if !stderr_path.exists() {
-            let wip_dir = Path::new("wip");
-            fs::create_dir_all(wip_dir)?;
-            let stderr_name = stderr_path
-                .file_name()
-                .unwrap_or_else(|| OsStr::new("test.stderr"));
-            let wip_path = wip_dir.join(stderr_name);
-            message::write_stderr(&wip_path, &stderr_path, &stderr);
-            fs::write(wip_path, stderr).map_err(Error::WriteStderr)?;
+            match project.update {
+                Update::Wip => {
+                    let wip_dir = Path::new("wip");
+                    fs::create_dir_all(wip_dir)?;
+                    let stderr_name = stderr_path
+                        .file_name()
+                        .unwrap_or_else(|| OsStr::new("test.stderr"));
+                    let wip_path = wip_dir.join(stderr_name);
+                    message::write_stderr_wip(&wip_path, &stderr_path, &stderr);
+                    fs::write(wip_path, stderr).map_err(Error::WriteStderr)?;
+                }
+                Update::Overwrite => {
+                    message::overwrite_stderr(&stderr_path, &stderr);
+                    fs::write(stderr_path, stderr).map_err(Error::WriteStderr)?;
+                }
+            }
             return Ok(());
         }
 
-        let expected = fs::read_to_string(stderr_path)
+        let expected = fs::read_to_string(&stderr_path)
             .map_err(Error::ReadStderr)?
             .replace("\r\n", "\n");
 
         if expected == stderr {
             message::nice();
-            Ok(())
-        } else {
-            message::mismatch(&expected, &stderr);
-            Err(Error::Mismatch)
+            return Ok(());
+        }
+
+        match project.update {
+            Update::Wip => {
+                message::mismatch(&expected, &stderr);
+                Err(Error::Mismatch)
+            }
+            Update::Overwrite => {
+                message::overwrite_stderr(&stderr_path, &stderr);
+                fs::write(stderr_path, stderr).map_err(Error::WriteStderr)?;
+                Ok(())
+            }
         }
     }
 }
