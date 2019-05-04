@@ -22,7 +22,7 @@ pub struct Project {
     pub target_dir: PathBuf,
     pub name: String,
     update: Update,
-    has_pass: bool,
+    pub has_pass: bool,
     has_compile_fail: bool,
 }
 
