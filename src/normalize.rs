@@ -38,7 +38,7 @@ fn filter(line: &str) -> Option<String> {
         }
     }
 
-    if line == "error: aborting due to previous error" {
+    if line.starts_with("error: aborting due to ") {
         return None;
     }
 
