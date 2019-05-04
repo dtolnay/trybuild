@@ -171,7 +171,8 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
-        let stderr = normalize::diagnostics(output.stderr);
+        let mut stderr = normalize::diagnostics(output.stderr);
+        stderr = stderr.replace(&name.0, "$CRATE");
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
@@ -287,7 +288,7 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     }
 
     fn bin_name(i: usize) -> Name {
-        Name(format!("test{:03}", i))
+        Name(format!("trybuild{:03}", i))
     }
 
     let mut vec = Vec::new();
