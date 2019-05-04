@@ -18,8 +18,7 @@ fn try_get(manifest_dir: &Path) -> Result<Map<String, Dependency>, Error> {
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let manifest: Manifest = toml::from_str(&manifest_str)?;
 
-    let mut dependencies = manifest.dependencies;
-    dependencies.extend(manifest.dev_dependencies);
+    let mut dependencies = manifest.dev_dependencies;
     dependencies.remove("trybuild");
 
     for dep in dependencies.values_mut() {
@@ -31,8 +30,6 @@ fn try_get(manifest_dir: &Path) -> Result<Map<String, Dependency>, Error> {
 
 #[derive(Deserialize)]
 struct Manifest {
-    #[serde(default)]
-    dependencies: Map<String, Dependency>,
     #[serde(default, rename = "dev-dependencies")]
     dev_dependencies: Map<String, Dependency>,
 }
