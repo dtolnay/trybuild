@@ -59,10 +59,7 @@ impl Runner {
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
         let project = Project {
-            // TODO: Include CARGO_PKG_NAME component so that different projects
-            // in the same workspace do not stomp on each other.
-
-            dir: path!(target_dir / "tests"),
+            dir: path!(target_dir / "tests" / crate_name),
             target_dir,
             name: format!("{}-tests", crate_name),
         };
