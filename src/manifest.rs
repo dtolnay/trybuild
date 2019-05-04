@@ -2,6 +2,7 @@ use serde::de::value::MapAccessDeserializer;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap as Map;
+use std::ffi::OsStr;
 use std::fmt;
 use std::path::PathBuf;
 use toml::Value;
@@ -32,9 +33,12 @@ pub enum Edition {
 
 #[derive(Serialize)]
 pub struct Bin {
-    pub name: String,
+    pub name: Name,
     pub path: PathBuf,
 }
+
+#[derive(Serialize, Clone)]
+pub struct Name(pub String);
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(remote = "Self")]
@@ -59,6 +63,12 @@ pub struct Build {
 
 #[derive(Serialize)]
 pub struct Workspace {}
+
+impl AsRef<OsStr> for Name {
+    fn as_ref(&self) -> &OsStr {
+        self.0.as_ref()
+    }
+}
 
 impl Serialize for Dependency {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

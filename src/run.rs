@@ -8,7 +8,7 @@ use super::{Expected, Runner, Test};
 use crate::banner;
 use crate::cargo;
 use crate::error::{Error, Result};
-use crate::manifest::{Bin, Build, Config, Dependency, Edition, Manifest, Package, Workspace};
+use crate::manifest::{Bin, Build, Config, Dependency, Edition, Manifest, Name, Package, Workspace};
 use crate::message;
 use crate::normalize;
 
@@ -122,14 +122,14 @@ impl Runner {
         }
 
         manifest.bins.push(Bin {
-            name: project.name.to_owned(),
+            name: Name(project.name.to_owned()),
             path: Path::new("main.rs").to_owned(),
         });
 
         for expanded in tests {
             if expanded.error.is_none() {
                 manifest.bins.push(Bin {
-                    name: expanded.test.name(),
+                    name: expanded.name.clone(),
                     path: manifest_dir.join(&expanded.test.path),
                 });
             }
@@ -153,21 +153,11 @@ impl Runner {
 }
 
 impl Test {
-    fn name(&self) -> String {
-        self.path
-            .file_stem()
-            .unwrap_or_else(|| self.path.as_os_str())
-            .to_owned()
-            .to_string_lossy()
-            .replace('-', "_")
-    }
-
-    fn run(&self, project: &Project) -> Result<()> {
+    fn run(&self, project: &Project, name: &Name) -> Result<()> {
         message::begin_test(self);
         check_exists(&self.path)?;
 
-        let name = self.name();
-        let output = cargo::build_test(project, &name)?;
+        let output = cargo::build_test(project, name)?;
         let success = output.status.success();
         let stderr = normalize::diagnostics(output.stderr);
 
@@ -176,17 +166,22 @@ impl Test {
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, success, stderr)
+        check(self, project, name, success, stderr)
     }
 
-    fn check_pass(&self, project: &Project, success: bool, stderr: String) -> Result<()> {
+    fn check_pass(
+        &self,
+        project: &Project,
+        name: &Name,
+        success: bool,
+        stderr: String,
+    ) -> Result<()> {
         if !success {
             message::failed_to_build(stderr);
             return Err(Error::CargoFail);
         }
 
-        let name = self.name();
-        let output = cargo::run_test(project, &name)?;
+        let output = cargo::run_test(project, name)?;
         message::output(stderr, &output);
 
         if output.status.success() {
@@ -196,7 +191,13 @@ impl Test {
         }
     }
 
-    fn check_compile_fail(&self, _project: &Project, success: bool, stderr: String) -> Result<()> {
+    fn check_compile_fail(
+        &self,
+        _project: &Project,
+        _name: &Name,
+        success: bool,
+        stderr: String,
+    ) -> Result<()> {
         if success {
             message::should_not_have_compiled();
             message::warnings(stderr);
@@ -241,6 +242,7 @@ fn check_exists(path: &Path) -> Result<()> {
 }
 
 struct ExpandedTest {
+    name: Name,
     test: Test,
     error: Option<Error>,
 }
@@ -252,46 +254,48 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
             .collect()
     }
 
-    let mut expanded = Vec::new();
+    fn bin_name(i: usize) -> Name {
+        Name(format!("test{:03}", i))
+    }
+
+    let mut vec = Vec::new();
 
     for test in tests {
+        let mut expanded = ExpandedTest {
+            name: bin_name(vec.len()),
+            test: test.clone(),
+            error: None,
+        };
         if let Some(utf8) = test.path.to_str() {
             if utf8.contains('*') {
                 match glob(utf8) {
                     Ok(paths) => {
                         for path in paths {
-                            expanded.push(ExpandedTest {
+                            vec.push(ExpandedTest {
+                                name: bin_name(vec.len()),
                                 test: Test {
                                     path,
-                                    expected: test.expected,
+                                    expected: expanded.test.expected,
                                 },
                                 error: None,
                             });
                         }
+                        continue;
                     }
-                    Err(error) => {
-                        expanded.push(ExpandedTest {
-                            test: test.clone(),
-                            error: Some(error),
-                        });
-                    }
+                    Err(error) => expanded.error = Some(error),
                 }
-                continue;
             }
         }
-        expanded.push(ExpandedTest {
-            test: test.clone(),
-            error: None,
-        });
+        vec.push(expanded);
     }
 
-    expanded
+    vec
 }
 
 impl ExpandedTest {
     fn run(self, project: &Project) -> Result<()> {
         match self.error {
-            None => self.test.run(project),
+            None => self.test.run(project, &self.name),
             Some(error) => {
                 message::begin_test(&self.test);
                 Err(error)

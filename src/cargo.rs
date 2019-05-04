@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
 use crate::error::{Error, Result};
+use crate::manifest::Name;
 use crate::run::Project;
 
 fn raw_cargo() -> Command {
@@ -31,7 +32,7 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
     }
 }
 
-pub fn build_test(project: &Project, name: &str) -> Result<Output> {
+pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
     let _ = cargo(project)
         .arg("clean")
         .arg("--package")
@@ -51,7 +52,7 @@ pub fn build_test(project: &Project, name: &str) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub fn run_test(project: &Project, name: &str) -> Result<Output> {
+pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
     cargo(project)
         .arg("run")
         .arg("--bin")
