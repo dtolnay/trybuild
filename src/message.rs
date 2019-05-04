@@ -48,23 +48,29 @@ pub(crate) fn nice() {
     term::reset();
 }
 
-pub(crate) fn begin_test(test: &Test) {
-    let display_name = test
-        .path
-        .file_name()
-        .unwrap_or_else(|| test.path.as_os_str())
-        .to_string_lossy();
-
-    let expected = match test.expected {
-        Expected::Pass => "should pass",
-        Expected::CompileFail => "should fail to compile",
+pub(crate) fn begin_test(test: &Test, show_expected: bool) {
+    let display_name = if show_expected {
+        test.path
+            .file_name()
+            .unwrap_or_else(|| test.path.as_os_str())
+            .to_string_lossy()
+    } else {
+        test.path.as_os_str().to_string_lossy()
     };
 
     print!("Testing ");
     term::bold();
     print!("{}", display_name);
     term::reset();
-    print!(" [{}] ... ", expected);
+
+    if show_expected {
+        match test.expected {
+            Expected::Pass => print!(" [should pass]"),
+            Expected::CompileFail => print!(" [should fail to compile]"),
+        }
+    }
+
+    print!(" ... ");
 }
 
 pub(crate) fn failed_to_build(stderr: String) {

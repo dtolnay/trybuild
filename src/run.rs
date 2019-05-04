@@ -21,7 +21,9 @@ pub struct Project {
     pub dir: PathBuf,
     pub target_dir: PathBuf,
     pub name: String,
-    pub update: Update,
+    update: Update,
+    has_pass: bool,
+    has_compile_fail: bool,
 }
 
 impl Runner {
@@ -62,11 +64,22 @@ impl Runner {
         let target_dir = cargo::target_dir()?;
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
+        let mut has_pass = false;
+        let mut has_compile_fail = false;
+        for e in tests {
+            match e.test.expected {
+                Expected::Pass => has_pass = true,
+                Expected::CompileFail => has_compile_fail = true,
+            }
+        }
+
         let project = Project {
             dir: path!(target_dir / "tests" / crate_name),
             target_dir,
             name: format!("{}-tests", crate_name),
             update: Update::env()?,
+            has_pass,
+            has_compile_fail,
         };
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;
@@ -161,7 +174,8 @@ impl Runner {
 
 impl Test {
     fn run(&self, project: &Project, name: &Name) -> Result<()> {
-        message::begin_test(self);
+        let show_expected = project.has_pass && project.has_compile_fail;
+        message::begin_test(self, show_expected);
         check_exists(&self.path)?;
 
         let output = cargo::build_test(project, name)?;
@@ -322,7 +336,8 @@ impl ExpandedTest {
         match self.error {
             None => self.test.run(project, &self.name),
             Some(error) => {
-                message::begin_test(&self.test);
+                let show_expected = false;
+                message::begin_test(&self.test, show_expected);
                 Err(error)
             }
         }
