@@ -20,7 +20,8 @@ pub enum Error {
     ReadStderr(io::Error),
     RunFailed,
     ShouldNotHaveCompiled,
-    Toml(toml::ser::Error),
+    TomlDe(toml::de::Error),
+    TomlSer(toml::ser::Error),
     UpdateVar(OsString),
     WriteStderr(io::Error),
 }
@@ -49,7 +50,8 @@ impl Display for Error {
             ShouldNotHaveCompiled => {
                 write!(f, "expected test case to fail to compile, but it succeeded")
             }
-            Toml(e) => write!(f, "{}", e),
+            TomlDe(e) => write!(f, "{}", e),
+            TomlSer(e) => write!(f, "{}", e),
             UpdateVar(var) => write!(
                 f,
                 "unrecognized value of TRYCOMPILE_UPDATE: {:?}",
@@ -89,8 +91,14 @@ impl From<io::Error> for Error {
     }
 }
 
+impl From<toml::de::Error> for Error {
+    fn from(err: toml::de::Error) -> Self {
+        Error::TomlDe(err)
+    }
+}
+
 impl From<toml::ser::Error> for Error {
     fn from(err: toml::ser::Error) -> Self {
-        Error::Toml(err)
+        Error::TomlSer(err)
     }
 }

@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use super::{Expected, Runner, Test};
 use crate::banner;
 use crate::cargo;
+use crate::dependencies;
 use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::manifest::{
@@ -120,26 +121,18 @@ impl Runner {
             .map(PathBuf::from)
             .ok_or(Error::ProjectDir)?;
 
-        if self.deps.is_empty() {
-            manifest.dependencies.insert(
-                crate_name,
-                Dependency {
-                    version: None,
-                    path: Some(manifest_dir.clone()),
-                    rest: Map::new(),
-                },
-            );
-        }
+        manifest.dependencies.insert(
+            crate_name,
+            Dependency {
+                version: None,
+                path: Some(manifest_dir.clone()),
+                rest: Map::new(),
+            },
+        );
 
-        for (depname, dependency) in &self.deps {
-            manifest.dependencies.insert(
-                depname.clone(),
-                Dependency {
-                    path: dependency.path.as_ref().map(|path| manifest_dir.join(path)),
-                    ..dependency.clone()
-                },
-            );
-        }
+        manifest
+            .dependencies
+            .extend(dependencies::get(&manifest_dir));
 
         manifest.bins.push(Bin {
             name: Name(project.name.to_owned()),
