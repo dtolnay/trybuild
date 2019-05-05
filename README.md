@@ -8,6 +8,12 @@ Trybuild
 Trybuild is a test harness for invoking rustc on a set of test cases and
 asserting that any resulting error messages are the ones intended.
 
+<p align="center">
+<a href="#compile-fail-tests">
+<img src="https://user-images.githubusercontent.com/1940490/57186574-76469e00-6e96-11e9-8cb5-b63b657170c9.png" width="700">
+</a>
+</p>
+
 Such tests are commonly useful for testing error reporting involving procedural
 macros. We would write test cases triggering either errors detected by the macro
 or errors detected by the Rust compiler in the resulting expanded code, and
@@ -49,12 +55,6 @@ different extension). If it matches, the test case is considered to succeed.
 
 Dependencies listed under `[dev-dependencies]` in the project's Cargo.toml are
 accessible from within the test cases.
-
-<p align="center">
-<a href="#compile-fail-tests">
-<img src="https://user-images.githubusercontent.com/1940490/57186574-76469e00-6e96-11e9-8cb5-b63b657170c9.png" width="700">
-</a>
-</p>
 
 Failing tests display the expected vs actual compiler output inline.
 
