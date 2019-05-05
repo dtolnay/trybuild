@@ -5,7 +5,6 @@ use std::fmt::{self, Display};
 use std::io;
 use std::path::PathBuf;
 
-#[remain::sorted]
 pub enum Error {
     Cargo(io::Error),
     CargoFail,
@@ -29,11 +28,9 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Display for Error {
-    #[remain::check]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
 
-        #[sorted]
         match self {
             Cargo(e) => write!(f, "failed to execute cargo: {}", e),
             CargoFail => write!(f, "cargo reported an error"),
