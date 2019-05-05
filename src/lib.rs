@@ -117,7 +117,8 @@
 //!
 //! Alternatively, run `cargo test` with the environment variable
 //! `TRYBUILD=overwrite` to skip the *wip* directory and write all compiler
-//! output directly in place.
+//! output directly in place. You'll want to check `git diff` afterward to be
+//! sure the compiler's output is what you had in mind.
 
 #[macro_use]
 mod term;
