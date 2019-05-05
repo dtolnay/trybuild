@@ -37,8 +37,6 @@ pub(crate) fn test_fail(err: Error) {
 pub(crate) fn no_tests_enabled() {
     term::color(Yellow);
     println!("There are no tests enabled yet.");
-    println!();
-    println!("Open tests/progress.rs and uncomment to turn on some of the tests.");
     term::reset();
 }
 
