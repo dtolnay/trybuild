@@ -133,6 +133,7 @@ mod error;
 mod manifest;
 mod message;
 mod normalize;
+mod prng;
 mod run;
 
 use std::cell::RefCell;
