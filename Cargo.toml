@@ -3,6 +3,11 @@ name = "trybuild"
 version = "0.0.0"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Test harness for ui tests of compiler diagnostics"
+repository = "https://github.com/dtolnay/trybuild"
+documentation = "https://docs.rs/trybuild"
+readme = "README.md"
 
 [dependencies]
 glob = "0.3"
