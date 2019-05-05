@@ -1,4 +1,4 @@
-use termcolor::Color::*;
+use termcolor::Color::{self, *};
 
 use super::{Expected, Test};
 use crate::banner;
@@ -71,14 +71,10 @@ pub(crate) fn begin_test(test: &Test, show_expected: bool) {
     print!(" ... ");
 }
 
-pub(crate) fn failed_to_build(stderr: String) {
+pub(crate) fn failed_to_build(stderr: &str) {
     term::bold_color(Red);
     println!("error");
-    term::color(Red);
-    banner::dotted();
-    print!("{}", stderr);
-    banner::dotted();
-    term::reset();
+    snippet(Red, stderr);
     println!();
 }
 
@@ -105,11 +101,7 @@ pub(crate) fn write_stderr_wip(wip_path: &Path, stderr_path: &Path, stderr: &str
         "Move this file to `{}` to accept it as correct.",
         stderr_path,
     );
-    term::color(Yellow);
-    banner::dotted();
-    print!("{}", stderr);
-    banner::dotted();
-    term::reset();
+    snippet(Yellow, stderr);
     println!();
 }
 
@@ -122,11 +114,7 @@ pub(crate) fn overwrite_stderr(stderr_path: &Path, stderr: &str) {
     print!("NOTE");
     term::reset();
     println!(": writing the following output to `{}`.", stderr_path);
-    term::color(Yellow);
-    banner::dotted();
-    print!("{}", stderr);
-    banner::dotted();
-    term::reset();
+    snippet(Yellow, stderr);
     println!();
 }
 
@@ -137,23 +125,15 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!();
     term::bold_color(Blue);
     println!("EXPECTED:");
-    term::color(Blue);
-    banner::dotted();
-    print!("{}", expected);
-    banner::dotted();
-    term::reset();
+    snippet(Blue, expected);
     println!();
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
-    term::color(Red);
-    banner::dotted();
-    print!("{}", actual);
-    banner::dotted();
-    term::reset();
+    snippet(Red, actual);
     println!();
 }
 
-pub(crate) fn output(warnings: String, output: &Output) {
+pub(crate) fn output(warnings: &str, output: &Output) {
     let success = output.status.success();
     let stdout = normalize::trim(&output.stdout);
     let stderr = normalize::trim(&output.stderr);
@@ -185,27 +165,35 @@ pub(crate) fn output(warnings: String, output: &Output) {
         if !content.is_empty() {
             term::bold_color(color);
             println!("{}:", name);
-            term::color(color);
-            banner::dotted();
-            print!("{}", normalize::trim(content));
-            banner::dotted();
-            term::reset();
+            snippet(color, &normalize::trim(content));
             println!();
         }
     }
 }
 
-pub(crate) fn warnings(warnings: String) {
+pub(crate) fn warnings(warnings: &str) {
     if warnings.is_empty() {
         return;
     }
 
     term::bold_color(Yellow);
     println!("WARNINGS:");
-    term::color(Yellow);
+    snippet(Yellow, warnings);
+    println!();
+}
+
+fn snippet(color: Color, content: &str) {
+    term::color(color);
     banner::dotted();
-    print!("{}", warnings);
+
+    // Color one line at a time because Travis does not preserve color setting
+    // across output lines.
+    for line in content.lines() {
+        term::color(color);
+        println!("{}", line);
+    }
+
+    term::color(color);
     banner::dotted();
     term::reset();
-    println!();
 }

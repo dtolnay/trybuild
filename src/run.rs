@@ -193,12 +193,12 @@ impl Test {
         stderr: String,
     ) -> Result<()> {
         if !success {
-            message::failed_to_build(stderr);
+            message::failed_to_build(&stderr);
             return Err(Error::CargoFail);
         }
 
         let output = cargo::run_test(project, name)?;
-        message::output(stderr, &output);
+        message::output(&stderr, &output);
 
         if output.status.success() {
             Ok(())
@@ -216,7 +216,7 @@ impl Test {
     ) -> Result<()> {
         if success {
             message::should_not_have_compiled();
-            message::warnings(stderr);
+            message::warnings(&stderr);
             return Err(Error::ShouldNotHaveCompiled);
         }
 
