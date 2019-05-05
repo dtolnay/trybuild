@@ -41,19 +41,19 @@
 //! are accessible from within the test cases.
 //!
 //! <p align="center">
-//! <img src="compile-fail.png" width="700">
+//! <img src="https://user-images.githubusercontent.com/1940490/57186574-76469e00-6e96-11e9-8cb5-b63b657170c9.png" width="700">
 //! </p>
 //!
 //! Failing tests display the expected vs actual compiler output inline.
 //!
 //! <p align="center">
-//! <img src="mismatch.png" width="700">
+//! <img src="https://user-images.githubusercontent.com/1940490/57186575-79418e80-6e96-11e9-9478-c9b3dc10327f.png" width="700">
 //! </p>
 //!
 //! A compile_fail test that fails to fail to compile is also a failure.
 //!
 //! <p align="center">
-//! <img src="should-fail.png" width="700">
+//! <img src="https://user-images.githubusercontent.com/1940490/57186576-7b0b5200-6e96-11e9-8bfd-2de705125108.png" width="700">
 //! </p>
 //!
 //! <br>
@@ -88,7 +88,7 @@
 //! `main` function that does not panic when the compiled binary is executed.
 //!
 //! <p align="center">
-//! <img src="workshop.png" width="700">
+//! <img src="https://user-images.githubusercontent.com/1940490/57186580-7f376f80-6e96-11e9-9cae-8257609269ef.png" width="700">
 //! </p>
 //!
 //! <br>
@@ -112,7 +112,7 @@
 //! into your testcase directory.
 //!
 //! <p align="center">
-//! <img src="wip.png" width="700">
+//! <img src="https://user-images.githubusercontent.com/1940490/57186579-7cd51580-6e96-11e9-9f19-54dcecc9fbba.png" width="700">
 //! </p>
 //!
 //! Alternatively, run `cargo test` with the environment variable
