@@ -1,5 +1,5 @@
 use crate::dependencies::Dependency;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -22,8 +22,10 @@ pub struct Package {
     pub publish: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub enum Edition {
+    #[serde(rename = "2015")]
+    E2015,
     #[serde(rename = "2018")]
     E2018,
 }
@@ -49,6 +51,12 @@ pub struct Build {
 
 #[derive(Serialize)]
 pub struct Workspace {}
+
+impl Default for Edition {
+    fn default() -> Self {
+        Edition::E2018
+    }
+}
 
 impl AsRef<OsStr> for Name {
     fn as_ref(&self) -> &OsStr {

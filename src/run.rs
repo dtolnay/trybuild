@@ -10,7 +10,7 @@ use crate::cargo;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
-use crate::manifest::{Bin, Build, Config, Edition, Manifest, Name, Package, Workspace};
+use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message;
 use crate::normalize;
 
@@ -109,11 +109,13 @@ impl Runner {
         project: &Project,
         tests: &[ExpandedTest],
     ) -> Result<Manifest> {
+        let source_manifest = dependencies::get(&project.source_dir);
+
         let mut manifest = Manifest {
             package: Package {
                 name: project.name.clone(),
                 version: "0.0.0".to_owned(),
-                edition: Edition::E2018,
+                edition: source_manifest.edition,
                 publish: false,
             },
             dependencies: Map::new(),
@@ -130,9 +132,7 @@ impl Runner {
             },
         );
 
-        manifest
-            .dependencies
-            .extend(dependencies::get(&project.source_dir));
+        manifest.dependencies.extend(source_manifest.dev_dependencies);
 
         manifest.bins.push(Bin {
             name: Name(project.name.to_owned()),

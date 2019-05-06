@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::manifest::Edition;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -9,29 +10,30 @@ use std::path::Path;
 use std::path::PathBuf;
 use toml::Value;
 
-pub fn get(manifest_dir: &Path) -> Map<String, Dependency> {
+pub fn get(manifest_dir: &Path) -> Manifest {
     try_get(manifest_dir).unwrap_or_default()
 }
 
-fn try_get(manifest_dir: &Path) -> Result<Map<String, Dependency>, Error> {
+fn try_get(manifest_dir: &Path) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
-    let manifest: Manifest = toml::from_str(&manifest_str)?;
+    let mut manifest: Manifest = toml::from_str(&manifest_str)?;
 
-    let mut dependencies = manifest.dev_dependencies;
-    dependencies.remove("trybuild");
+    manifest.dev_dependencies.remove("trybuild");
 
-    for dep in dependencies.values_mut() {
+    for dep in manifest.dev_dependencies.values_mut() {
         dep.path = dep.path.as_ref().map(|path| manifest_dir.join(path));
     }
 
-    Ok(dependencies)
+    Ok(manifest)
 }
 
-#[derive(Deserialize)]
-struct Manifest {
+#[derive(Deserialize, Default)]
+pub struct Manifest {
+    #[serde(default)]
+    pub edition: Edition,
     #[serde(default, rename = "dev-dependencies")]
-    dev_dependencies: Map<String, Dependency>,
+    pub dev_dependencies: Map<String, Dependency>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
