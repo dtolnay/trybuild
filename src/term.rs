@@ -30,7 +30,7 @@ pub fn reset() {
 #[deny(unused_macros)]
 macro_rules! print {
     ($($args:tt)*) => {{
-        use std::io::Write as _;
+        use std::io::Write;
         let _ = std::write!($crate::term::lock(), $($args)*);
     }};
 }
@@ -38,7 +38,7 @@ macro_rules! print {
 #[deny(unused_macros)]
 macro_rules! println {
     ($($args:tt)*) => {{
-        use std::io::Write as _;
+        use std::io::Write;
         let _ = std::writeln!($crate::term::lock(), $($args)*);
     }};
 }
