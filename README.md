@@ -28,7 +28,7 @@ misuse of non-macro APIs.
 
 ```toml
 [dev-dependencies]
-trybuild = "0.0"
+trybuild = "1.0"
 ```
 
 *Compiler support: requires rustc 1.33+*
