@@ -115,7 +115,7 @@ impl Runner {
             package: Package {
                 name: project.name.clone(),
                 version: "0.0.0".to_owned(),
-                edition: source_manifest.edition,
+                edition: source_manifest.package.edition,
                 publish: false,
             },
             dependencies: Map::new(),

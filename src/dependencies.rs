@@ -31,9 +31,15 @@ fn try_get(manifest_dir: &Path) -> Result<Manifest, Error> {
 #[derive(Deserialize, Default)]
 pub struct Manifest {
     #[serde(default)]
-    pub edition: Edition,
+    pub package: Package,
     #[serde(default, rename = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
+}
+
+#[derive(Deserialize, Default)]
+pub struct Package {
+    #[serde(default)]
+    pub edition: Edition,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
