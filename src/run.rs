@@ -142,6 +142,10 @@ impl Runner {
             workspace: Some(Workspace {}),
         };
 
+        manifest.dependencies.extend(source_manifest.dependencies);
+        manifest
+            .dependencies
+            .extend(source_manifest.dev_dependencies);
         manifest.dependencies.insert(
             crate_name,
             Dependency {
@@ -152,10 +156,6 @@ impl Runner {
                 rest: Map::new(),
             },
         );
-
-        manifest
-            .dependencies
-            .extend(source_manifest.dev_dependencies);
 
         manifest.bins.push(Bin {
             name: Name(project.name.to_owned()),
