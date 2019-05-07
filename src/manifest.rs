@@ -7,6 +7,8 @@ use std::path::PathBuf;
 #[derive(Serialize)]
 pub struct Manifest {
     pub package: Package,
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub features: Map<String, Vec<String>>,
     pub dependencies: Map<String, Dependency>,
     #[serde(rename = "bin")]
     pub bins: Vec<Bin>,

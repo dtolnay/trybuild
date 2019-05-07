@@ -111,6 +111,15 @@ impl Runner {
     ) -> Result<Manifest> {
         let source_manifest = dependencies::get(&project.source_dir);
 
+        let features = source_manifest
+            .features
+            .keys()
+            .map(|feature| {
+                let enable = format!("{}/{}", crate_name, feature);
+                (feature.clone(), vec![enable])
+            })
+            .collect();
+
         let mut manifest = Manifest {
             package: Package {
                 name: project.name.clone(),
@@ -118,6 +127,7 @@ impl Runner {
                 edition: source_manifest.package.edition,
                 publish: false,
             },
+            features,
             dependencies: Map::new(),
             bins: Vec::new(),
             workspace: Some(Workspace {}),
@@ -128,6 +138,8 @@ impl Runner {
             Dependency {
                 version: None,
                 path: Some(project.source_dir.clone()),
+                default_features: false,
+                features: Vec::new(),
                 rest: Map::new(),
             },
         );

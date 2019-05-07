@@ -32,6 +32,8 @@ fn try_get(manifest_dir: &Path) -> Result<Manifest, Error> {
 pub struct Manifest {
     #[serde(default)]
     pub package: Package,
+    #[serde(default)]
+    pub features: Map<String, Vec<String>>,
     #[serde(default, rename = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
 }
@@ -49,8 +51,20 @@ pub struct Dependency {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<PathBuf>,
+    #[serde(rename = "default-features", default = "get_true", skip_serializing_if = "is_true")]
+    pub default_features: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub features: Vec<String>,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
+}
+
+fn get_true() -> bool {
+    true
+}
+
+fn is_true(boolean: &bool) -> bool {
+    *boolean
 }
 
 impl Serialize for Dependency {
@@ -86,6 +100,8 @@ impl<'de> Deserialize<'de> for Dependency {
                 Ok(Dependency {
                     version: Some(s.to_owned()),
                     path: None,
+                    default_features: true,
+                    features: Vec::new(),
                     rest: Map::new(),
                 })
             }
