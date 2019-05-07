@@ -1,5 +1,5 @@
 use crate::dependencies::Dependency;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;

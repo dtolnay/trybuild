@@ -132,7 +132,9 @@ impl Runner {
             },
         );
 
-        manifest.dependencies.extend(source_manifest.dev_dependencies);
+        manifest
+            .dependencies
+            .extend(source_manifest.dev_dependencies);
 
         manifest.bins.push(Bin {
             name: Name(project.name.to_owned()),
