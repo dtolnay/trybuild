@@ -51,7 +51,11 @@ pub struct Dependency {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<PathBuf>,
-    #[serde(rename = "default-features", default = "get_true", skip_serializing_if = "is_true")]
+    #[serde(
+        rename = "default-features",
+        default = "get_true",
+        skip_serializing_if = "is_true"
+    )]
     pub default_features: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
