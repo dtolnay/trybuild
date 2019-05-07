@@ -21,11 +21,16 @@ fn try_get(manifest_dir: &Path) -> Result<Manifest, Error> {
 
     manifest.dev_dependencies.remove("trybuild");
 
-    for dep in manifest.dev_dependencies.values_mut() {
-        dep.path = dep.path.as_ref().map(|path| manifest_dir.join(path));
-    }
+    make_relative(&mut manifest.dependencies, manifest_dir);
+    make_relative(&mut manifest.dev_dependencies, manifest_dir);
 
     Ok(manifest)
+}
+
+fn make_relative(dependencies: &mut Map<String, Dependency>, dir: &Path) {
+    for dep in dependencies.values_mut() {
+        dep.path = dep.path.as_ref().map(|path| dir.join(path));
+    }
 }
 
 #[derive(Deserialize, Default)]
@@ -34,6 +39,8 @@ pub struct Manifest {
     pub package: Package,
     #[serde(default)]
     pub features: Map<String, Vec<String>>,
+    #[serde(default)]
+    pub dependencies: Map<String, Dependency>,
     #[serde(default, rename = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
 }
