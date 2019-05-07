@@ -10,6 +10,7 @@ use crate::cargo;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
+use crate::features;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message;
 use crate::normalize;
@@ -24,6 +25,7 @@ pub struct Project {
     update: Update,
     pub has_pass: bool,
     has_compile_fail: bool,
+    pub features: Option<Vec<String>>,
 }
 
 impl Runner {
@@ -77,6 +79,8 @@ impl Runner {
             .map(PathBuf::from)
             .ok_or(Error::ProjectDir)?;
 
+        let features = features::find();
+
         let project = Project {
             dir: path!(target_dir / "tests" / crate_name),
             source_dir,
@@ -85,6 +89,7 @@ impl Runner {
             update: Update::env()?,
             has_pass,
             has_compile_fail,
+            features,
         };
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;

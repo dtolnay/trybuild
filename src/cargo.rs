@@ -46,6 +46,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .arg(if project.has_pass { "build" } else { "check" })
         .arg("--bin")
         .arg(name)
+        .args(features(project))
         .arg("--quiet")
         .arg("--color=never")
         .output()
@@ -57,6 +58,7 @@ pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
         .arg("run")
         .arg("--bin")
         .arg(name)
+        .args(features(project))
         .arg("--quiet")
         .arg("--color=never")
         .output()
@@ -78,4 +80,15 @@ pub fn target_dir() -> Result<PathBuf> {
     let metadata: Metadata = serde_json::from_slice(&output.stdout).map_err(Error::Metadata)?;
 
     Ok(metadata.target_directory)
+}
+
+fn features(project: &Project) -> Vec<String> {
+    match &project.features {
+        Some(features) => vec![
+            "--no-default-features".to_owned(),
+            "--features".to_owned(),
+            features.join(","),
+        ],
+        None => vec![],
+    }
 }

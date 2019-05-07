@@ -211,6 +211,7 @@ mod cargo;
 mod dependencies;
 mod env;
 mod error;
+mod features;
 mod manifest;
 mod message;
 mod normalize;
