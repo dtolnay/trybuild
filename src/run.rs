@@ -81,7 +81,7 @@ impl Runner {
 
         let features = features::find();
 
-        let project = Project {
+        let mut project = Project {
             dir: path!(target_dir / "tests" / crate_name),
             source_dir,
             target_dir,
@@ -97,6 +97,10 @@ impl Runner {
 
         let config = self.make_config();
         let config_toml = toml::to_string(&config)?;
+
+        if let Some(enabled_features) = &mut project.features {
+            enabled_features.retain(|feature| manifest.features.contains_key(feature));
+        }
 
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
         fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
