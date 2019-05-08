@@ -41,7 +41,7 @@ pub struct Manifest {
     pub features: Map<String, Vec<String>>,
     #[serde(default)]
     pub dependencies: Map<String, Dependency>,
-    #[serde(default, rename = "dev-dependencies")]
+    #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
 }
 
