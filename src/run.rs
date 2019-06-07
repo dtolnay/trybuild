@@ -14,8 +14,7 @@ use crate::features;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message;
 use crate::normalize;
-
-const IGNORED_LINTS: &[&str] = &["dead_code"];
+use crate::rustflags;
 
 pub struct Project {
     pub dir: PathBuf,
@@ -175,15 +174,10 @@ impl Runner {
     }
 
     fn make_config(&self) -> Config {
-        let mut rustflags = Vec::new();
-
-        for &lint in IGNORED_LINTS {
-            rustflags.push("-A".to_owned());
-            rustflags.push(lint.to_owned());
-        }
-
         Config {
-            build: Build { rustflags },
+            build: Build {
+                rustflags: rustflags::make_vec(),
+            },
         }
     }
 }

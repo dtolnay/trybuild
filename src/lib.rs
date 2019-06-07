@@ -217,6 +217,7 @@ mod message;
 mod normalize;
 mod prng;
 mod run;
+mod rustflags;
 
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
