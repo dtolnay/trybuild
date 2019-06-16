@@ -32,8 +32,16 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
         fix_patches(patches, manifest_dir);
     }
 
-    if let Some(workspace) = &manifest.package.workspace {
-        println!("workspace: {:#?}", workspace);
+    Ok(manifest)
+}
+
+pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManifest, Error> {
+    let cargo_toml_path = manifest_dir.join("Cargo.toml");
+    let manifest_str = fs::read_to_string(cargo_toml_path)?;
+    let mut manifest: WorkspaceManifest = toml::from_str(&manifest_str)?;
+
+    if let Some(ref mut patches) = manifest.patch {
+        fix_patches(patches, manifest_dir);
     }
 
     Ok(manifest)
@@ -56,6 +64,16 @@ fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
 }
 
 #[derive(Deserialize, Default, Debug)]
+pub struct WorkspaceManifest {
+    #[serde(default)]
+    pub members: Members,
+    pub patch: Option<Map<String, RegistryPatch>>,
+}
+
+#[derive(Deserialize, Default, Debug)]
+pub struct Members {}
+
+#[derive(Deserialize, Default, Debug)]
 pub struct Manifest {
     #[serde(default)]
     pub package: Package,
@@ -72,6 +90,7 @@ pub struct Manifest {
 pub struct Package {
     #[serde(default)]
     pub edition: Edition,
+    pub workspace: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

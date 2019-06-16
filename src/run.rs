@@ -120,6 +120,15 @@ impl Runner {
     ) -> Result<Manifest> {
         let mut source_manifest = dependencies::get_manifest(&project.source_dir);
 
+        if let Some(workspace) = &source_manifest.package.workspace {
+            let manifest_dir = project.source_dir.join(workspace);
+            if let Ok(workspace_manifest) = dependencies::try_get_workspace_manifest(&manifest_dir)
+            {
+                let dependencies::WorkspaceManifest { patch, .. } = workspace_manifest;
+                source_manifest.patch = patch;
+            }
+        }
+
         let features = source_manifest
             .features
             .keys()
