@@ -118,7 +118,7 @@ impl Runner {
         project: &Project,
         tests: &[ExpandedTest],
     ) -> Result<Manifest> {
-        let source_manifest = dependencies::get(&project.source_dir);
+        let mut source_manifest = dependencies::get_manifest(&project.source_dir);
 
         let features = source_manifest
             .features
@@ -140,6 +140,7 @@ impl Runner {
             dependencies: Map::new(),
             bins: Vec::new(),
             workspace: Some(Workspace {}),
+            patch: source_manifest.patch,
         };
 
         manifest.dependencies.extend(source_manifest.dependencies);

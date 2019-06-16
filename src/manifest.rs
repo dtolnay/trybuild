@@ -1,4 +1,4 @@
-use crate::dependencies::Dependency;
+use crate::dependencies::{Dependency, RegistryPatch};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
@@ -14,6 +14,8 @@ pub struct Manifest {
     pub bins: Vec<Bin>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace: Option<Workspace>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub patch: Option<Map<String, RegistryPatch>>,
 }
 
 #[derive(Serialize, Debug)]

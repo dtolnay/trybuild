@@ -10,26 +10,48 @@ use std::path::Path;
 use std::path::PathBuf;
 use toml::Value;
 
-pub fn get(manifest_dir: &Path) -> Manifest {
-    try_get(manifest_dir).unwrap_or_default()
+pub fn get_manifest(manifest_dir: &Path) -> Manifest {
+    match try_get_manifest(manifest_dir) {
+        Ok(manifest) => manifest,
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+            Manifest::default()
+        }
+    }
 }
 
-fn try_get(manifest_dir: &Path) -> Result<Manifest, Error> {
+fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: Manifest = toml::from_str(&manifest_str)?;
 
-    manifest.dev_dependencies.remove("trybuild");
+    fix_dependencies(&mut manifest.dependencies, manifest_dir);
+    fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);
 
-    make_relative(&mut manifest.dependencies, manifest_dir);
-    make_relative(&mut manifest.dev_dependencies, manifest_dir);
+    if let Some(ref mut patches) = manifest.patch {
+        fix_patches(patches, manifest_dir);
+    }
+
+    if let Some(workspace) = &manifest.package.workspace {
+        println!("workspace: {:#?}", workspace);
+    }
 
     Ok(manifest)
 }
 
-fn make_relative(dependencies: &mut Map<String, Dependency>, dir: &Path) {
+fn fix_dependencies(dependencies: &mut Map<String, Dependency>, dir: &Path) {
+    dependencies.remove("trybuild");
     for dep in dependencies.values_mut() {
         dep.path = dep.path.as_ref().map(|path| dir.join(path));
+    }
+}
+
+fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
+    for registry in patches.values_mut() {
+        registry.crates.remove("trybuild");
+        for patch in registry.crates.values_mut() {
+            patch.path = patch.path.as_ref().map(|path| dir.join(path));
+        }
     }
 }
 
@@ -43,6 +65,7 @@ pub struct Manifest {
     pub dependencies: Map<String, Dependency>,
     #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
+    pub patch: Option<Map<String, RegistryPatch>>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -68,6 +91,22 @@ pub struct Dependency {
     pub features: Vec<String>,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RegistryPatch {
+    #[serde(flatten)]
+    crates: Map<String, Patch>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Patch {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
 }
 
 fn get_true() -> bool {
