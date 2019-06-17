@@ -223,21 +223,23 @@ use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::thread;
 
+#[derive(Debug)]
 pub struct TestCases {
     runner: RefCell<Runner>,
 }
 
+#[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Test {
     path: PathBuf,
     expected: Expected,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum Expected {
     Pass,
     CompileFail,

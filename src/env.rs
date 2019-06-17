@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use std::env;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Update {
     Wip,
     Overwrite,

@@ -4,7 +4,7 @@ use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Manifest {
     pub package: Package,
     #[serde(skip_serializing_if = "Map::is_empty")]
@@ -16,7 +16,7 @@ pub struct Manifest {
     pub workspace: Option<Workspace>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Package {
     pub name: String,
     pub version: String,
@@ -24,7 +24,7 @@ pub struct Package {
     pub publish: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Edition {
     #[serde(rename = "2015")]
     E2015,
@@ -32,26 +32,26 @@ pub enum Edition {
     E2018,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Bin {
     pub name: Name,
     pub path: PathBuf,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct Name(pub String);
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Config {
     pub build: Build,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Build {
     pub rustflags: Vec<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Workspace {}
 
 impl Default for Edition {
