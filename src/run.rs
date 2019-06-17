@@ -124,8 +124,9 @@ impl Runner {
             let manifest_dir = project.source_dir.join(workspace);
             if let Ok(workspace_manifest) = dependencies::try_get_workspace_manifest(&manifest_dir)
             {
-                let dependencies::WorkspaceManifest { patch, .. } = workspace_manifest;
+                let dependencies::WorkspaceManifest { patch, replace, .. } = workspace_manifest;
                 source_manifest.patch = patch;
+                source_manifest.replace = replace;
             }
         }
 
@@ -150,6 +151,7 @@ impl Runner {
             bins: Vec::new(),
             workspace: Some(Workspace {}),
             patch: source_manifest.patch,
+            replace: source_manifest.replace,
         };
 
         manifest.dependencies.extend(source_manifest.dependencies);

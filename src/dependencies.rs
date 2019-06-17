@@ -26,6 +26,10 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
         fix_patches(patches, manifest_dir);
     }
 
+    if let Some(ref mut replacements) = manifest.replace {
+        fix_replacements(replacements, manifest_dir);
+    }
+
     Ok(manifest)
 }
 
@@ -36,6 +40,10 @@ pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManife
 
     if let Some(ref mut patches) = manifest.patch {
         fix_patches(patches, manifest_dir);
+    }
+
+    if let Some(ref mut replacements) = manifest.replace {
+        fix_replacements(replacements, manifest_dir);
     }
 
     Ok(manifest)
@@ -57,8 +65,14 @@ fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
     }
 }
 
-#[derive(Deserialize, Default, Debug)]
-pub struct WorkspaceManifest {
+fn fix_replacements(replacements: &mut Map<String, Replacement>, dir: &Path) {
+    replacements.remove("trybuild");
+    for replacement in replacements.values_mut() {
+        replacement.path = replacement.path.as_ref().map(|path| dir.join(path));
+    }
+}
+
+#[derive(Deserialize, Default, Debug)]pub struct WorkspaceManifest {
     #[serde(default)]
     pub members: Members,
     pub patch: Option<Map<String, RegistryPatch>>,
@@ -79,6 +93,7 @@ pub struct Manifest {
     #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
     pub patch: Option<Map<String, RegistryPatch>>,
+    pub replace: Option<Map<String, Replacement>>,
 }
 
 #[derive(Deserialize, Default, Debug)]
