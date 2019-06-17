@@ -7,6 +7,12 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 
+#[derive(Deserialize)]
+pub struct Metadata {
+    pub target_directory: PathBuf,
+    pub workspace_root: Option<PathBuf>,
+}
+
 fn raw_cargo() -> Command {
     Command::new(option_env!("CARGO").unwrap_or("cargo"))
 }
@@ -67,21 +73,14 @@ pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub fn target_dir() -> Result<PathBuf> {
-    #[derive(Deserialize)]
-    struct Metadata {
-        target_directory: PathBuf,
-    }
-
+pub fn metadata() -> Result<Metadata> {
     let output = raw_cargo()
         .arg("metadata")
         .arg("--format-version=1")
         .output()
         .map_err(Error::Cargo)?;
 
-    let metadata: Metadata = serde_json::from_slice(&output.stdout).map_err(Error::Metadata)?;
-
-    Ok(metadata.target_directory)
+    serde_json::from_slice(&output.stdout).map_err(Error::Metadata)
 }
 
 fn features(project: &Project) -> Vec<String> {

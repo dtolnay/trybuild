@@ -72,11 +72,21 @@ fn fix_replacements(replacements: &mut Map<String, Replacement>, dir: &Path) {
     }
 }
 
-#[derive(Deserialize, Default, Debug)]pub struct WorkspaceManifest {
+#[derive(Deserialize, Default, Debug)]
+pub struct WorkspaceManifest {
     #[serde(default)]
     pub members: Members,
     pub patch: Option<Map<String, RegistryPatch>>,
     pub replace: Option<Map<String, Replacement>>,
+}
+
+impl WorkspaceManifest {
+    /// Within a workspace the [patch], [replace] and [profile.*] sections in Cargo.toml are only
+    /// recognized in the root crate's manifest, and ignored in member crates' manifests:
+    pub fn apply_to(&self, manifest: &mut Manifest) {
+        manifest.patch = self.patch.clone();
+        manifest.replace = self.replace.clone();
+    }
 }
 
 #[derive(Deserialize, Default, Debug)]

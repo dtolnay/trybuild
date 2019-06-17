@@ -26,6 +26,16 @@ pub struct Project {
     pub has_pass: bool,
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
+    pub workspace: Option<PathBuf>,
+}
+
+impl Project {
+    fn workspace_manifest(&self) -> Option<Result<dependencies::WorkspaceManifest>> {
+        self.workspace
+            .as_ref()
+            .map(|workspace| self.source_dir.join(workspace))
+            .map(|manifest_dir| dependencies::try_get_workspace_manifest(&manifest_dir))
+    }
 }
 
 impl Runner {
@@ -63,7 +73,10 @@ impl Runner {
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
-        let target_dir = cargo::target_dir()?;
+        let metadata = cargo::metadata()?;
+        let target_dir = metadata.target_directory;
+        let workspace = metadata.workspace_root;
+
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
         let mut has_pass = false;
@@ -90,6 +103,7 @@ impl Runner {
             has_pass,
             has_compile_fail,
             features,
+            workspace,
         };
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;
@@ -120,14 +134,8 @@ impl Runner {
     ) -> Result<Manifest> {
         let mut source_manifest = dependencies::get_manifest(&project.source_dir);
 
-        if let Some(workspace) = &source_manifest.package.workspace {
-            let manifest_dir = project.source_dir.join(workspace);
-            if let Ok(workspace_manifest) = dependencies::try_get_workspace_manifest(&manifest_dir)
-            {
-                let dependencies::WorkspaceManifest { patch, replace, .. } = workspace_manifest;
-                source_manifest.patch = patch;
-                source_manifest.replace = replace;
-            }
+        if let Some(workspace_manifest) = project.workspace_manifest() {
+            workspace_manifest?.apply_to(&mut source_manifest);
         }
 
         let features = source_manifest
