@@ -11,13 +11,7 @@ use std::path::PathBuf;
 use toml::Value;
 
 pub fn get_manifest(manifest_dir: &Path) -> Manifest {
-    match try_get_manifest(manifest_dir) {
-        Ok(manifest) => manifest,
-        Err(err) => {
-            eprintln!("Error: {:?}", err);
-            Manifest::default()
-        }
-    }
+    try_get_manifest(manifest_dir).unwrap_or_default()
 }
 
 fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
@@ -68,6 +62,7 @@ pub struct WorkspaceManifest {
     #[serde(default)]
     pub members: Members,
     pub patch: Option<Map<String, RegistryPatch>>,
+    pub replace: Option<Map<String, Replacement>>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -127,6 +122,8 @@ pub struct Patch {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
 }
+
+pub type Replacement = Patch;
 
 fn get_true() -> bool {
     true
