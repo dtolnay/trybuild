@@ -33,7 +33,7 @@ fn make_relative(dependencies: &mut Map<String, Dependency>, dir: &Path) {
     }
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 pub struct Manifest {
     #[serde(default)]
     pub package: Package,
@@ -45,13 +45,13 @@ pub struct Manifest {
     pub dev_dependencies: Map<String, Dependency>,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 pub struct Package {
     #[serde(default)]
     pub edition: Edition,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(remote = "Self")]
 pub struct Dependency {
     #[serde(skip_serializing_if = "Option::is_none")]

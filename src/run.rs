@@ -16,6 +16,7 @@ use crate::message;
 use crate::normalize;
 use crate::rustflags;
 
+#[derive(Debug)]
 pub struct Project {
     pub dir: PathBuf,
     source_dir: PathBuf,
@@ -292,6 +293,7 @@ fn check_exists(path: &Path) -> Result<()> {
     }
 }
 
+#[derive(Debug)]
 struct ExpandedTest {
     name: Name,
     test: Test,
