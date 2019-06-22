@@ -87,7 +87,6 @@ pub struct Manifest {
 pub struct Package {
     #[serde(default)]
     pub edition: Edition,
-    pub workspace: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
