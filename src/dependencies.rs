@@ -56,7 +56,7 @@ fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
     }
 }
 
-fn fix_replacements(replacements: &mut Map<String, Replacement>, dir: &Path) {
+fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Path) {
     replacements.remove("trybuild");
     for replacement in replacements.values_mut() {
         replacement.path = replacement.path.as_ref().map(|path| dir.join(path));
@@ -68,7 +68,7 @@ pub struct WorkspaceManifest {
     #[serde(default)]
     pub patch: Map<String, RegistryPatch>,
     #[serde(default)]
-    pub replace: Map<String, Replacement>,
+    pub replace: Map<String, Patch>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -124,8 +124,6 @@ pub struct Patch {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
 }
-
-pub type Replacement = Patch;
 
 fn get_true() -> bool {
     true

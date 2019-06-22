@@ -1,4 +1,4 @@
-use crate::dependencies::{Dependency, RegistryPatch, Replacement};
+use crate::dependencies::{Dependency, Patch, RegistryPatch};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
@@ -17,7 +17,7 @@ pub struct Manifest {
     #[serde(skip_serializing_if = "Map::is_empty")]
     pub patch: Map<String, RegistryPatch>,
     #[serde(skip_serializing_if = "Map::is_empty")]
-    pub replace: Map<String, Replacement>,
+    pub replace: Map<String, Patch>,
 }
 
 #[derive(Serialize, Debug)]
