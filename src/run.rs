@@ -26,14 +26,7 @@ pub struct Project {
     pub has_pass: bool,
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
-    pub workspace: PathBuf,
-}
-
-impl Project {
-    fn workspace_manifest(&self) -> Result<dependencies::WorkspaceManifest> {
-        let workspace_manifest_dir = self.source_dir.join(&self.workspace);
-        dependencies::try_get_workspace_manifest(&workspace_manifest_dir)
-    }
+    workspace: PathBuf,
 }
 
 impl Runner {
@@ -132,7 +125,8 @@ impl Runner {
     ) -> Result<Manifest> {
         let mut source_manifest = dependencies::get_manifest(&project.source_dir);
 
-        project.workspace_manifest()?.apply_to(&mut source_manifest);
+        dependencies::try_get_workspace_manifest(&project.workspace)?
+            .apply_to(&mut source_manifest);
 
         let features = source_manifest
             .features
