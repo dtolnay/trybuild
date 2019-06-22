@@ -10,7 +10,7 @@ use crate::rustflags;
 #[derive(Deserialize)]
 pub struct Metadata {
     pub target_directory: PathBuf,
-    pub workspace_root: Option<PathBuf>,
+    pub workspace_root: PathBuf,
 }
 
 fn raw_cargo() -> Command {
