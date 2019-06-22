@@ -26,6 +26,16 @@ pub struct Project {
     pub has_pass: bool,
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
+    pub workspace: Option<PathBuf>,
+}
+
+impl Project {
+    fn workspace_manifest(&self) -> Option<Result<dependencies::WorkspaceManifest>> {
+        self.workspace
+            .as_ref()
+            .map(|workspace| self.source_dir.join(workspace))
+            .map(|manifest_dir| dependencies::try_get_workspace_manifest(&manifest_dir))
+    }
 }
 
 impl Runner {
@@ -63,7 +73,10 @@ impl Runner {
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
-        let target_dir = cargo::target_dir()?;
+        let metadata = cargo::metadata()?;
+        let target_dir = metadata.target_directory;
+        let workspace = metadata.workspace_root;
+
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
         let mut has_pass = false;
@@ -90,6 +103,7 @@ impl Runner {
             has_pass,
             has_compile_fail,
             features,
+            workspace,
         };
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;
@@ -118,7 +132,11 @@ impl Runner {
         project: &Project,
         tests: &[ExpandedTest],
     ) -> Result<Manifest> {
-        let source_manifest = dependencies::get(&project.source_dir);
+        let mut source_manifest = dependencies::get_manifest(&project.source_dir);
+
+        if let Some(workspace_manifest) = project.workspace_manifest() {
+            workspace_manifest?.apply_to(&mut source_manifest);
+        }
 
         let features = source_manifest
             .features
@@ -140,6 +158,8 @@ impl Runner {
             dependencies: Map::new(),
             bins: Vec::new(),
             workspace: Some(Workspace {}),
+            patch: source_manifest.patch,
+            replace: source_manifest.replace,
         };
 
         manifest.dependencies.extend(source_manifest.dependencies);
