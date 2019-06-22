@@ -78,14 +78,9 @@ fn fix_replacements(replacements: &mut Map<String, Replacement>, dir: &Path) {
 
 #[derive(Deserialize, Default, Debug)]
 pub struct WorkspaceManifest {
-    #[serde(default)]
-    pub members: Members,
     pub patch: Option<Map<String, RegistryPatch>>,
     pub replace: Option<Map<String, Replacement>>,
 }
-
-#[derive(Deserialize, Default, Debug)]
-pub struct Members {}
 
 #[derive(Deserialize, Default, Debug)]
 pub struct Manifest {
