@@ -21,8 +21,6 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
 
     fix_dependencies(&mut manifest.dependencies, manifest_dir);
     fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);
-    fix_patches(&mut manifest.patch, manifest_dir);
-    fix_replacements(&mut manifest.replace, manifest_dir);
 
     Ok(manifest)
 }
@@ -83,10 +81,6 @@ pub struct Manifest {
     pub dependencies: Map<String, Dependency>,
     #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
-    #[serde(default)]
-    pub patch: Map<String, RegistryPatch>,
-    #[serde(default)]
-    pub replace: Map<String, Replacement>,
 }
 
 #[derive(Deserialize, Default, Debug)]
