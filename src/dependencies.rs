@@ -110,8 +110,8 @@ pub struct Dependency {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(transparent)]
 pub struct RegistryPatch {
-    #[serde(flatten)]
     crates: Map<String, Patch>,
 }
 
