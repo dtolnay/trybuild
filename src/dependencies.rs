@@ -21,14 +21,8 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
 
     fix_dependencies(&mut manifest.dependencies, manifest_dir);
     fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);
-
-    if let Some(ref mut patches) = manifest.patch {
-        fix_patches(patches, manifest_dir);
-    }
-
-    if let Some(ref mut replacements) = manifest.replace {
-        fix_replacements(replacements, manifest_dir);
-    }
+    fix_patches(&mut manifest.patch, manifest_dir);
+    fix_replacements(&mut manifest.replace, manifest_dir);
 
     Ok(manifest)
 }
@@ -42,13 +36,8 @@ pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManife
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: WorkspaceManifest = toml::from_str(&manifest_str)?;
 
-    if let Some(ref mut patches) = manifest.patch {
-        fix_patches(patches, manifest_dir);
-    }
-
-    if let Some(ref mut replacements) = manifest.replace {
-        fix_replacements(replacements, manifest_dir);
-    }
+    fix_patches(&mut manifest.patch, manifest_dir);
+    fix_replacements(&mut manifest.replace, manifest_dir);
 
     Ok(manifest)
 }
@@ -78,8 +67,10 @@ fn fix_replacements(replacements: &mut Map<String, Replacement>, dir: &Path) {
 
 #[derive(Deserialize, Default, Debug)]
 pub struct WorkspaceManifest {
-    pub patch: Option<Map<String, RegistryPatch>>,
-    pub replace: Option<Map<String, Replacement>>,
+    #[serde(default)]
+    pub patch: Map<String, RegistryPatch>,
+    #[serde(default)]
+    pub replace: Map<String, Replacement>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -92,8 +83,10 @@ pub struct Manifest {
     pub dependencies: Map<String, Dependency>,
     #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
-    pub patch: Option<Map<String, RegistryPatch>>,
-    pub replace: Option<Map<String, Replacement>>,
+    #[serde(default)]
+    pub patch: Map<String, RegistryPatch>,
+    #[serde(default)]
+    pub replace: Map<String, Replacement>,
 }
 
 #[derive(Deserialize, Default, Debug)]

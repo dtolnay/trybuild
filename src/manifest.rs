@@ -14,10 +14,10 @@ pub struct Manifest {
     pub bins: Vec<Bin>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace: Option<Workspace>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub patch: Option<Map<String, RegistryPatch>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub replace: Option<Map<String, Replacement>>,
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub patch: Map<String, RegistryPatch>,
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub replace: Map<String, Replacement>,
 }
 
 #[derive(Serialize, Debug)]
