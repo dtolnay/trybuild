@@ -33,6 +33,10 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
     Ok(manifest)
 }
 
+pub fn get_workspace_manifest(manifest_dir: &Path) -> WorkspaceManifest {
+    try_get_workspace_manifest(manifest_dir).unwrap_or_default()
+}
+
 pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
@@ -78,15 +82,6 @@ pub struct WorkspaceManifest {
     pub members: Members,
     pub patch: Option<Map<String, RegistryPatch>>,
     pub replace: Option<Map<String, Replacement>>,
-}
-
-impl WorkspaceManifest {
-    /// Within a workspace the [patch], [replace] and [profile.*] sections in Cargo.toml are only
-    /// recognized in the root crate's manifest, and ignored in member crates' manifests:
-    pub fn apply_to(&self, manifest: &mut Manifest) {
-        manifest.patch = self.patch.clone();
-        manifest.replace = self.replace.clone();
-    }
 }
 
 #[derive(Deserialize, Default, Debug)]

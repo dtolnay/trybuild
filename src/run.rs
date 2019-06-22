@@ -123,10 +123,8 @@ impl Runner {
         project: &Project,
         tests: &[ExpandedTest],
     ) -> Result<Manifest> {
-        let mut source_manifest = dependencies::get_manifest(&project.source_dir);
-
-        dependencies::try_get_workspace_manifest(&project.workspace)?
-            .apply_to(&mut source_manifest);
+        let source_manifest = dependencies::get_manifest(&project.source_dir);
+        let workspace_manifest = dependencies::get_workspace_manifest(&project.workspace);
 
         let features = source_manifest
             .features
@@ -148,8 +146,10 @@ impl Runner {
             dependencies: Map::new(),
             bins: Vec::new(),
             workspace: Some(Workspace {}),
-            patch: source_manifest.patch,
-            replace: source_manifest.replace,
+            // Within a workspace, only the [patch] and [replace] sections in
+            // the workspace root's Cargo.toml are applied by Cargo.
+            patch: workspace_manifest.patch,
+            replace: workspace_manifest.replace,
         };
 
         manifest.dependencies.extend(source_manifest.dependencies);
