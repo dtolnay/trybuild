@@ -255,6 +255,8 @@ impl Test {
                 Update::Wip => {
                     let wip_dir = Path::new("wip");
                     fs::create_dir_all(wip_dir)?;
+                    let gitignore_path = wip_dir.join(".gitignore");
+                    fs::write(gitignore_path, "*\n")?;
                     let stderr_name = stderr_path
                         .file_name()
                         .unwrap_or_else(|| OsStr::new("test.stderr"));
