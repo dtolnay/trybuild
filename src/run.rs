@@ -5,7 +5,6 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
 use super::{Expected, Runner, Test};
-use crate::banner;
 use crate::cargo;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
@@ -38,8 +37,7 @@ impl Runner {
             panic!("tests failed");
         });
 
-        println!();
-        banner::colorful();
+        print!("\n\n");
 
         let len = tests.len();
         let mut failures = 0;
@@ -55,8 +53,7 @@ impl Runner {
             }
         }
 
-        banner::colorful();
-        println!();
+        print!("\n\n");
 
         if failures > 0 && project.name != "trybuild-tests" {
             panic!("{} of {} tests failed", failures, len);

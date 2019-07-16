@@ -206,7 +206,6 @@ mod term;
 #[macro_use]
 mod path;
 
-mod banner;
 mod cargo;
 mod dependencies;
 mod env;
@@ -215,7 +214,6 @@ mod features;
 mod manifest;
 mod message;
 mod normalize;
-mod prng;
 mod run;
 mod rustflags;
 

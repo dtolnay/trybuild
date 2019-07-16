@@ -1,7 +1,6 @@
 use termcolor::Color::{self, *};
 
 use super::{Expected, Test};
-use crate::banner;
 use crate::error::Error;
 use crate::normalize;
 use crate::term;
@@ -183,8 +182,12 @@ pub(crate) fn warnings(warnings: &str) {
 }
 
 fn snippet(color: Color, content: &str) {
+    fn dotted_line() {
+        println!("{}", "┈".repeat(60));
+    }
+
     term::color(color);
-    banner::dotted();
+    dotted_line();
 
     // Color one line at a time because Travis does not preserve color setting
     // across output lines.
@@ -194,6 +197,6 @@ fn snippet(color: Color, content: &str) {
     }
 
     term::color(color);
-    banner::dotted();
+    dotted_line();
     term::reset();
 }
