@@ -277,7 +277,7 @@ impl Test {
             .replace("\r\n", "\n");
 
         if expected == stderr {
-            message::nice();
+            message::ok();
             return Ok(());
         }
 

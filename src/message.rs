@@ -40,9 +40,9 @@ pub(crate) fn no_tests_enabled() {
     term::reset();
 }
 
-pub(crate) fn nice() {
+pub(crate) fn ok() {
     term::color(Green);
-    println!("nice!");
+    println!("ok");
     term::reset();
 }
 
@@ -56,7 +56,7 @@ pub(crate) fn begin_test(test: &Test, show_expected: bool) {
         test.path.as_os_str().to_string_lossy()
     };
 
-    print!("Testing ");
+    print!("test ");
     term::bold();
     print!("{}", display_name);
     term::reset();
@@ -140,7 +140,7 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     let has_output = !stdout.is_empty() || !stderr.is_empty();
 
     if success {
-        nice();
+        ok();
         if has_output || !warnings.is_empty() {
             println!();
         }
