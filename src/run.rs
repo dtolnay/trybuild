@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::features;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message;
-use crate::normalize;
+use crate::normalize::{self, Variations};
 use crate::rustflags;
 
 #[derive(Debug)]
@@ -198,14 +198,11 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
-        let stderr = normalize::diagnostics(output.stderr)
-            .into_iter()
-            .map(|mut stderr| {
-                stderr = stderr.replace(&name.0, "$CRATE");
-                stderr = stderr.replace(project.source_dir.to_string_lossy().as_ref(), "$DIR");
-                stderr
-            })
-            .collect::<Vec<_>>();
+        let stderr = normalize::diagnostics(output.stderr).map(|stderr| {
+            stderr
+                .replace(&name.0, "$CRATE")
+                .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
+        });
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
@@ -220,9 +217,9 @@ impl Test {
         project: &Project,
         name: &Name,
         success: bool,
-        stderr: Vec<String>,
+        variations: Variations,
     ) -> Result<()> {
-        let preferred = stderr.last().unwrap();
+        let preferred = variations.preferred();
 
         if !success {
             message::failed_to_build(preferred);
@@ -244,9 +241,9 @@ impl Test {
         project: &Project,
         _name: &Name,
         success: bool,
-        stderr: Vec<String>,
+        variations: Variations,
     ) -> Result<()> {
-        let preferred = stderr.last().unwrap();
+        let preferred = variations.preferred();
 
         if success {
             message::should_not_have_compiled();
@@ -282,7 +279,7 @@ impl Test {
             .map_err(Error::ReadStderr)?
             .replace("\r\n", "\n");
 
-        if stderr.iter().any(|stderr| expected == *stderr) {
+        if variations.any(|stderr| expected == stderr) {
             message::ok();
             return Ok(());
         }

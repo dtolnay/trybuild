@@ -12,14 +12,36 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     normalized
 }
 
-pub fn diagnostics(output: Vec<u8>) -> Vec<String> {
+pub fn diagnostics(output: Vec<u8>) -> Variations {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
-    [Basic, StripCouldNotCompile]
+    let variations = [Basic, StripCouldNotCompile]
         .iter()
         .map(|normalization| apply(&from_bytes, *normalization))
-        .collect()
+        .collect();
+
+    Variations { variations }
+}
+
+pub struct Variations {
+    variations: Vec<String>,
+}
+
+impl Variations {
+    pub fn map<F: FnMut(String) -> String>(self, f: F) -> Self {
+        Variations {
+            variations: self.variations.into_iter().map(f).collect(),
+        }
+    }
+
+    pub fn preferred(&self) -> &str {
+        self.variations.last().unwrap()
+    }
+
+    pub fn any<F: FnMut(&str) -> bool>(&self, mut f: F) -> bool {
+        self.variations.iter().any(|stderr| f(stderr))
+    }
 }
 
 #[derive(PartialOrd, PartialEq, Copy, Clone)]
