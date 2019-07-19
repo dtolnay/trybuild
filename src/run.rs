@@ -198,9 +198,14 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
-        let mut stderr = normalize::diagnostics(output.stderr);
-        stderr = stderr.replace(&name.0, "$CRATE");
-        stderr = stderr.replace(project.source_dir.to_string_lossy().as_ref(), "$DIR");
+        let stderr = normalize::diagnostics(output.stderr)
+            .into_iter()
+            .map(|mut stderr| {
+                stderr = stderr.replace(&name.0, "$CRATE");
+                stderr = stderr.replace(project.source_dir.to_string_lossy().as_ref(), "$DIR");
+                stderr
+            })
+            .collect::<Vec<_>>();
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
@@ -215,15 +220,17 @@ impl Test {
         project: &Project,
         name: &Name,
         success: bool,
-        stderr: String,
+        stderr: Vec<String>,
     ) -> Result<()> {
+        let preferred = stderr.last().unwrap();
+
         if !success {
-            message::failed_to_build(&stderr);
+            message::failed_to_build(preferred);
             return Err(Error::CargoFail);
         }
 
         let output = cargo::run_test(project, name)?;
-        message::output(&stderr, &output);
+        message::output(preferred, &output);
 
         if output.status.success() {
             Ok(())
@@ -237,11 +244,13 @@ impl Test {
         project: &Project,
         _name: &Name,
         success: bool,
-        stderr: String,
+        stderr: Vec<String>,
     ) -> Result<()> {
+        let preferred = stderr.last().unwrap();
+
         if success {
             message::should_not_have_compiled();
-            message::warnings(&stderr);
+            message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
 
@@ -258,12 +267,12 @@ impl Test {
                         .file_name()
                         .unwrap_or_else(|| OsStr::new("test.stderr"));
                     let wip_path = wip_dir.join(stderr_name);
-                    message::write_stderr_wip(&wip_path, &stderr_path, &stderr);
-                    fs::write(wip_path, stderr).map_err(Error::WriteStderr)?;
+                    message::write_stderr_wip(&wip_path, &stderr_path, preferred);
+                    fs::write(wip_path, preferred).map_err(Error::WriteStderr)?;
                 }
                 Update::Overwrite => {
-                    message::overwrite_stderr(&stderr_path, &stderr);
-                    fs::write(stderr_path, stderr).map_err(Error::WriteStderr)?;
+                    message::overwrite_stderr(&stderr_path, preferred);
+                    fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
             return Ok(());
@@ -273,19 +282,19 @@ impl Test {
             .map_err(Error::ReadStderr)?
             .replace("\r\n", "\n");
 
-        if expected == stderr {
+        if stderr.iter().any(|stderr| expected == *stderr) {
             message::ok();
             return Ok(());
         }
 
         match project.update {
             Update::Wip => {
-                message::mismatch(&expected, &stderr);
+                message::mismatch(&expected, preferred);
                 Err(Error::Mismatch)
             }
             Update::Overwrite => {
-                message::overwrite_stderr(&stderr_path, &stderr);
-                fs::write(stderr_path, stderr).map_err(Error::WriteStderr)?;
+                message::overwrite_stderr(&stderr_path, preferred);
+                fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 Ok(())
             }
         }

@@ -12,14 +12,29 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     normalized
 }
 
-pub fn diagnostics(output: Vec<u8>) -> String {
+pub fn diagnostics(output: Vec<u8>) -> Vec<String> {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
+    [Basic, StripCouldNotCompile]
+        .iter()
+        .map(|normalization| apply(&from_bytes, *normalization))
+        .collect()
+}
+
+#[derive(PartialOrd, PartialEq, Copy, Clone)]
+enum Normalization {
+    Basic,
+    StripCouldNotCompile,
+}
+
+use self::Normalization::*;
+
+fn apply(original: &str, normalization: Normalization) -> String {
     let mut normalized = String::new();
 
-    for line in from_bytes.lines() {
-        if let Some(line) = filter(line) {
+    for line in original.lines() {
+        if let Some(line) = filter(line, normalization) {
             normalized += &line;
             if !normalized.ends_with("\n\n") {
                 normalized.push('\n');
@@ -30,7 +45,7 @@ pub fn diagnostics(output: Vec<u8>) -> String {
     trim(normalized)
 }
 
-fn filter(line: &str) -> Option<String> {
+fn filter(line: &str, normalization: Normalization) -> Option<String> {
     if line.trim_start().starts_with("--> ") {
         if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
             let cut_start = line.find('>').unwrap() + 2;
@@ -44,6 +59,12 @@ fn filter(line: &str) -> Option<String> {
 
     if line == "To learn more, run the command again with --verbose." {
         return None;
+    }
+
+    if normalization >= StripCouldNotCompile {
+        if line.starts_with("error: Could not compile `") {
+            return None;
+        }
     }
 
     Some(line.to_owned())
