@@ -134,7 +134,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
 
 pub(crate) fn output(warnings: &str, output: &Output, build_out: &str) {
     let success = output.status.success();
-    let bld_stdout = normalize::trim(&build_out.stdout);
+    let bld_stdout = normalize::trim(&build_out);
     let stdout = normalize::trim(&output.stdout);
     let stderr = normalize::trim(&output.stderr);
     let has_output = !stdout.is_empty() || !stderr.is_empty();

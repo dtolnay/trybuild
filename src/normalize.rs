@@ -16,7 +16,7 @@ pub fn diagnostics(output: &std::process::Output) -> Variations {
     let mut err_from_bytes = String::from_utf8_lossy(&output.stderr).to_string();
     err_from_bytes = err_from_bytes.replace("\r\n", "\n");
 
-    let mut out_from_bytes = String::from_utf8_lossy(&output.stdout).to_string();
+    let out_from_bytes = String::from_utf8_lossy(&output.stdout);
     let variations_out = out_from_bytes.replace("\r\n", "\n");
 
     let variations_err = [Basic, StripCouldNotCompile]
