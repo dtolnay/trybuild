@@ -198,7 +198,8 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
-        let stderr = normalize::diagnostics(output.stderr).map(|stderr| {
+
+        let stdio = normalize::diagnostics(&output).map(|stderr| {
             stderr
                 .replace(&name.0, "$CRATE")
                 .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
@@ -209,7 +210,7 @@ impl Test {
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, name, success, stderr)
+        check(self, project, name, success, stdio)
     }
 
     fn check_pass(
@@ -220,6 +221,8 @@ impl Test {
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
+        // from build output (for proc-macro output)
+        let build_stdout = variations.stdout();
 
         if !success {
             message::failed_to_build(preferred);
@@ -227,7 +230,7 @@ impl Test {
         }
 
         let output = cargo::run_test(project, name)?;
-        message::output(preferred, &output);
+        message::output(preferred, &output, build_stdout);
 
         if output.status.success() {
             Ok(())
