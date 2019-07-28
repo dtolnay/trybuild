@@ -17,7 +17,7 @@ pub fn diagnostics(output: &std::process::Output) -> Variations {
     err_from_bytes = err_from_bytes.replace("\r\n", "\n");
 
     let mut out_from_bytes = String::from_utf8_lossy(&output.stdout).to_string();
-    variations_out = out_from_bytes.replace("\r\n", "\n");
+    let variations_out = out_from_bytes.replace("\r\n", "\n");
 
     let variations_err = [Basic, StripCouldNotCompile]
         .iter()
@@ -51,8 +51,8 @@ impl Variations {
         self.variations_err.iter().any(|stderr| f(stderr))
     }
 
-    pub fn stdout(&self) -> &Vec<String> {
-        &self.variations_out
+    pub fn stdout(&self) -> &str {
+        self.variations_out.as_str()
     }
 }
 

@@ -132,7 +132,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!();
 }
 
-pub(crate) fn output(warnings: &str, output: &Output, build_out: &Output) {
+pub(crate) fn output(warnings: &str, output: &Output, build_out: &str) {
     let success = output.status.success();
     let bld_stdout = normalize::trim(&build_out.stdout);
     let stdout = normalize::trim(&output.stdout);
@@ -161,11 +161,7 @@ pub(crate) fn output(warnings: &str, output: &Output, build_out: &Output) {
 
     let color = if success { Yellow } else { Red };
 
-    for (name, content) in &[
-        ("STDOUT", stdout),
-        ("STDERR", stderr),
-        ("BUILD-STDOUT", bld_stdout),
-    ] {
+    for (name, content) in &[("BUILD-STDOUT", bld_stdout), ("STDOUT", stdout), ("STDERR", stderr)] {
         if !content.is_empty() {
             term::bold_color(color);
             println!("{}:", name);
