@@ -170,6 +170,18 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     }
 }
 
+pub(crate) fn fail_output(exit: bool, output: &normalize::Variations) {
+    let stdout = output.stdout();
+    let color = if !exit { Yellow } else { Red };
+
+    if !stdout.is_empty() {
+        term::bold_color(color);
+        println!("STDOUT:");
+        snippet(color, &normalize::trim(stdout));
+        println!();
+    }
+}
+
 pub(crate) fn warnings(warnings: &str) {
     if warnings.is_empty() {
         return;

@@ -198,7 +198,8 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
-        let stderr = normalize::diagnostics(output.stderr).map(|stderr| {
+
+        let stdio = normalize::diagnostics(&output).map(|stderr| {
             stderr
                 .replace(&name.0, "$CRATE")
                 .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
@@ -209,7 +210,7 @@ impl Test {
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, name, success, stderr)
+        check(self, project, name, success, stdio)
     }
 
     fn check_pass(
@@ -220,15 +221,23 @@ impl Test {
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
+        // from build output (for proc-macro output)
+        let build_stdout = variations.stdout();
 
         if !success {
             message::failed_to_build(preferred);
             return Err(Error::CargoFail);
         }
 
-        let output = cargo::run_test(project, name)?;
-        message::output(preferred, &output);
+        let mut output = cargo::run_test(project, name)?;
+        output.stdout = format!(
+            "{}\n{}",
+            build_stdout,
+            String::from_utf8_lossy(&output.stdout)
+        )
+        .into_bytes();
 
+        message::output(preferred, &output);
         if output.status.success() {
             Ok(())
         } else {
@@ -247,10 +256,11 @@ impl Test {
 
         if success {
             message::should_not_have_compiled();
+            message::fail_output(success, &variations);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
-
+        
         let stderr_path = self.path.with_extension("stderr");
 
         if !stderr_path.exists() {
@@ -272,6 +282,7 @@ impl Test {
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
+            message::fail_output(success, &variations);
             return Ok(());
         }
 
@@ -281,6 +292,7 @@ impl Test {
 
         if variations.any(|stderr| expected == stderr) {
             message::ok();
+            
             return Ok(());
         }
 
