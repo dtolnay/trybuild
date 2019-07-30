@@ -11,7 +11,7 @@ use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::features;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
-use crate::message;
+use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Variations};
 use crate::rustflags;
 
@@ -249,7 +249,7 @@ impl Test {
 
         if success {
             message::should_not_have_compiled();
-            message::fail_output(success, &build_stdout);
+            message::fail_output(Fail, &build_stdout);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
@@ -275,7 +275,7 @@ impl Test {
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
-            message::fail_output(success, &build_stdout);
+            message::fail_output(Warn, &build_stdout);
             return Ok(());
         }
 

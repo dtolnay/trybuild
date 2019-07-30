@@ -8,6 +8,13 @@ use crate::term;
 use std::path::Path;
 use std::process::Output;
 
+pub(crate) enum Level {
+    Fail,
+    Warn,
+}
+
+pub(crate) use self::Level::*;
+
 pub(crate) fn prepare_fail(err: Error) {
     if err.already_printed() {
         return;
@@ -170,8 +177,11 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     }
 }
 
-pub(crate) fn fail_output(exit: bool, stdout: &[u8]) {
-    let color = if !exit { Yellow } else { Red };
+pub(crate) fn fail_output(level: Level, stdout: &[u8]) {
+    let color = match level {
+        Fail => Red,
+        Warn => Yellow,
+    };
 
     if !stdout.is_empty() {
         term::bold_color(color);
