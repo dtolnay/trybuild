@@ -260,7 +260,7 @@ impl Test {
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
-        
+
         let stderr_path = self.path.with_extension("stderr");
 
         if !stderr_path.exists() {
@@ -292,7 +292,6 @@ impl Test {
 
         if variations.any(|stderr| expected == stderr) {
             message::ok();
-            
             return Ok(());
         }
 
