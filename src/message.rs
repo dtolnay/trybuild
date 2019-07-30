@@ -170,8 +170,7 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     }
 }
 
-pub(crate) fn fail_output(exit: bool, output: &normalize::Variations) {
-    let stdout = output.stdout();
+pub(crate) fn fail_output(exit: bool, stdout: &[u8]) {
     let color = if !exit { Yellow } else { Red };
 
     if !stdout.is_empty() {

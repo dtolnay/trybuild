@@ -12,47 +12,35 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     normalized
 }
 
-pub fn diagnostics(output: &std::process::Output) -> Variations {
-    let mut err_from_bytes = String::from_utf8_lossy(&output.stderr).to_string();
-    err_from_bytes = err_from_bytes.replace("\r\n", "\n");
+pub fn diagnostics(output: Vec<u8>) -> Variations {
+    let mut from_bytes = String::from_utf8_lossy(&output).to_string();
+    from_bytes = from_bytes.replace("\r\n", "\n");
 
-    let out_from_bytes = String::from_utf8_lossy(&output.stdout);
-    let variations_out = out_from_bytes.replace("\r\n", "\n");
-
-    let variations_err = [Basic, StripCouldNotCompile]
+    let variations = [Basic, StripCouldNotCompile]
         .iter()
-        .map(|normalization| apply(&err_from_bytes, *normalization))
+        .map(|normalization| apply(&from_bytes, *normalization))
         .collect();
 
-    Variations {
-        variations_err,
-        variations_out,
-    }
+    Variations { variations }
 }
 
 pub struct Variations {
-    variations_err: Vec<String>,
-    variations_out: String,
+    variations: Vec<String>,
 }
 
 impl Variations {
     pub fn map<F: FnMut(String) -> String>(self, f: F) -> Self {
         Variations {
-            variations_err: self.variations_err.into_iter().map(f).collect(),
-            variations_out: self.variations_out,
+            variations: self.variations.into_iter().map(f).collect(),
         }
     }
 
     pub fn preferred(&self) -> &str {
-        self.variations_err.last().unwrap()
+        self.variations.last().unwrap()
     }
 
     pub fn any<F: FnMut(&str) -> bool>(&self, mut f: F) -> bool {
-        self.variations_err.iter().any(|stderr| f(stderr))
-    }
-
-    pub fn stdout(&self) -> &str {
-        self.variations_out.as_str()
+        self.variations.iter().any(|stderr| f(stderr))
     }
 }
 

@@ -199,7 +199,7 @@ impl Test {
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
 
-        let stdio = normalize::diagnostics(&output).map(|stderr| {
+        let stdio = normalize::diagnostics(output.stderr).map(|stderr| {
             stderr
                 .replace(&name.0, "$CRATE")
                 .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
@@ -210,7 +210,7 @@ impl Test {
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, name, success, stdio)
+        check(self, project, name, success, stdio, output.stdout)
     }
 
     fn check_pass(
@@ -219,24 +219,16 @@ impl Test {
         name: &Name,
         success: bool,
         variations: Variations,
+        build_stdout: Vec<u8>,
     ) -> Result<()> {
         let preferred = variations.preferred();
-        // from build output (for proc-macro output)
-        let build_stdout = variations.stdout();
-
         if !success {
             message::failed_to_build(preferred);
             return Err(Error::CargoFail);
         }
 
         let mut output = cargo::run_test(project, name)?;
-        output.stdout = format!(
-            "{}{}",
-            build_stdout,
-            String::from_utf8_lossy(&output.stdout)
-        )
-        .into_bytes();
-
+        output.stdout.splice(..0, build_stdout);
         message::output(preferred, &output);
         if output.status.success() {
             Ok(())
@@ -251,12 +243,13 @@ impl Test {
         _name: &Name,
         success: bool,
         variations: Variations,
+        build_stdout: Vec<u8>,
     ) -> Result<()> {
         let preferred = variations.preferred();
 
         if success {
             message::should_not_have_compiled();
-            message::fail_output(success, &variations);
+            message::fail_output(success, &build_stdout);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
@@ -282,7 +275,7 @@ impl Test {
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
-            message::fail_output(success, &variations);
+            message::fail_output(success, &build_stdout);
             return Ok(());
         }
 
