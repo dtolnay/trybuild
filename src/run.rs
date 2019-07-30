@@ -231,7 +231,7 @@ impl Test {
 
         let mut output = cargo::run_test(project, name)?;
         output.stdout = format!(
-            "{}\n{}",
+            "{}{}",
             build_stdout,
             String::from_utf8_lossy(&output.stdout)
         )
