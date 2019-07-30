@@ -229,9 +229,15 @@ impl Test {
             return Err(Error::CargoFail);
         }
 
-        let output = cargo::run_test(project, name)?;
-        message::output(preferred, &output, build_stdout);
+        let mut output = cargo::run_test(project, name)?;
+        output.stdout = format!(
+            "{}\n{}",
+            build_stdout,
+            String::from_utf8_lossy(&output.stdout)
+        )
+        .into_bytes();
 
+        message::output(preferred, &output);
         if output.status.success() {
             Ok(())
         } else {
@@ -250,10 +256,11 @@ impl Test {
 
         if success {
             message::should_not_have_compiled();
+            message::fail_output(success, &variations);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
-
+        
         let stderr_path = self.path.with_extension("stderr");
 
         if !stderr_path.exists() {
@@ -275,6 +282,7 @@ impl Test {
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
+            message::fail_output(success, &variations);
             return Ok(());
         }
 
@@ -284,6 +292,7 @@ impl Test {
 
         if variations.any(|stderr| expected == stderr) {
             message::ok();
+            
             return Ok(());
         }
 
