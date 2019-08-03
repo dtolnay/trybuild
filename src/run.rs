@@ -31,7 +31,8 @@ pub struct Project {
 impl Runner {
     pub fn run(&mut self) {
         let mut tests = expand_globs(&self.tests);
-        self.filter(&mut tests);
+
+        self.drain_filter(&mut tests);
 
         let project = self.prepare(&tests).unwrap_or_else(|err| {
             message::prepare_fail(err);
@@ -61,39 +62,51 @@ impl Runner {
         }
     }
 
-    fn filter(&self, tests: &mut Vec<ExpandedTest>) {
-        let include_file = if self.include.len() >= 3 {
-            self.include.last()
-        } else {
-            None
-        };
-
-        println!("{:?}", include_file);
-
-        let mut filtered = Vec::new();
-        for test in tests {
-            let path = test.test.path.as_path();
-
-            let found = if let Some(inc_test) = &include_test {
-                inc_test.iter().any(|t| {
-                    let arg: Vec<_> = t.split('=').collect();
-                    if let Some(file) = arg.last() {
-                        Some(OsStr::new(&file)) == path.file_name()
-                    } else {
-                        false
-                    }
-                })
-            } else {
-                false
-            };
-
-            if !found {
-                println!("{:?} {}", path, found);
-                filtered.push(test);
+    // returns vec of removed items so it mimics std's drain_filter some what, and
+    // incase, instead of running nothing you want to run all tests if none are found
+    // matching self.included (trybuild=foo.rs)
+    fn drain_filter(&self, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
+        fn _drain_filter(name: Option<&str>, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
+            let mut v = Vec::new();
+            let old_len = tests.len();
+            let mut pos = 0;
+            let mut count = 0;
+            while count != old_len {
+                let path = tests[pos].test.path.as_path();
+                let found = if let Some(inc_test) = &name {
+                    Some(OsStr::new(&inc_test)) == path.file_name()
+                } else {
+                    false
+                };
+                if !found {
+                    let del = tests.remove(pos);
+                    v.push(del);
+                } else {
+                    pos += 1;
+                }
+                count += 1;
             }
+            v
         }
-        println!("{:?}", filtered);
-        tests = &mut filtered
+
+        let empty = Vec::new();
+        if self.include.len() >= 3 {
+            if let Some(f) = self.include.last() {
+                if f.contains("trybuild=") {
+                    let arg: Vec<_> = f.split('=').collect();
+                    // is there a more direct way to do this or just have
+                    // _drain_filter take a Option<&&str> instead
+                    let a = arg.last().map(|s| *s);
+                    _drain_filter(a, tests)
+                } else {
+                    empty
+                }
+            } else {
+                empty
+            }
+        } else {
+            empty
+        }
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
