@@ -30,7 +30,8 @@ pub struct Project {
 
 impl Runner {
     pub fn run(&mut self) {
-        let tests = expand_globs(&self.tests);
+        let mut tests = expand_globs(&self.tests);
+        self.filter(&mut tests);
 
         let project = self.prepare(&tests).unwrap_or_else(|err| {
             message::prepare_fail(err);
@@ -58,6 +59,41 @@ impl Runner {
         if failures > 0 && project.name != "trybuild-tests" {
             panic!("{} of {} tests failed", failures, len);
         }
+    }
+
+    fn filter(&self, tests: &mut Vec<ExpandedTest>) {
+        let include_file = if self.include.len() >= 3 {
+            self.include.last()
+        } else {
+            None
+        };
+
+        println!("{:?}", include_file);
+
+        let mut filtered = Vec::new();
+        for test in tests {
+            let path = test.test.path.as_path();
+
+            let found = if let Some(inc_test) = &include_test {
+                inc_test.iter().any(|t| {
+                    let arg: Vec<_> = t.split('=').collect();
+                    if let Some(file) = arg.last() {
+                        Some(OsStr::new(&file)) == path.file_name()
+                    } else {
+                        false
+                    }
+                })
+            } else {
+                false
+            };
+
+            if !found {
+                println!("{:?} {}", path, found);
+                filtered.push(test);
+            }
+        }
+        println!("{:?}", filtered);
+        tests = &mut filtered
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
