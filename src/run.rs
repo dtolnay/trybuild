@@ -63,8 +63,8 @@ impl Runner {
     }
 
     // returns vec of removed items so it mimics std's drain_filter some what, and
-    // incase, instead of running nothing you want to run all tests if none are found
-    // matching self.included (trybuild=foo.rs)
+    // incase instead of running nothing you want to run all tests if none are found
+    // matching self.included (trybuild=foo.rs) self.drain_filter returns full ExpandedTest Vec
     fn drain_filter(&self, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
         fn _drain_filter(name: Option<&str>, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
             let mut v = Vec::new();
@@ -95,7 +95,7 @@ impl Runner {
                 if f.contains("trybuild=") {
                     let arg: Vec<_> = f.split('=').collect();
                     // is there a more direct way to do this or just have
-                    // _drain_filter take a Option<&&str> instead
+                    // _drain_filter take a Option<&&str> instead 
                     let a = arg.last().map(|s| *s);
                     _drain_filter(a, tests)
                 } else {
