@@ -63,30 +63,34 @@ impl Runner {
     }
 
     // returns vec of removed items so it mimics std's drain_filter some what, and
-    // incase instead of running nothing you want to run all tests if none are found
+    // incase, instead of running nothing you want to run all tests if none are found
     // matching self.included (trybuild=foo.rs) self.drain_filter returns full ExpandedTest Vec
     fn drain_filter(&self, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
         fn _drain_filter(name: Option<&str>, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
-            let mut v = Vec::new();
+            let mut removed = Vec::new();
             let old_len = tests.len();
             let mut pos = 0;
             let mut count = 0;
             while count != old_len {
                 let path = tests[pos].test.path.as_path();
                 let found = if let Some(inc_test) = &name {
-                    Some(OsStr::new(&inc_test)) == path.file_name()
+                    if let Some(file_name) = path.to_str() {
+                        file_name.contains(inc_test)
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 };
                 if !found {
                     let del = tests.remove(pos);
-                    v.push(del);
+                    removed.push(del);
                 } else {
                     pos += 1;
                 }
                 count += 1;
             }
-            v
+            removed
         }
 
         let empty = Vec::new();
@@ -94,9 +98,7 @@ impl Runner {
             if let Some(f) = self.include.last() {
                 if f.contains("trybuild=") {
                     let arg: Vec<_> = f.split('=').collect();
-                    // is there a more direct way to do this or just have
-                    // _drain_filter take a Option<&&str> instead 
-                    let a = arg.last().map(|s| *s);
+                    let a = arg.last().copied();
                     _drain_filter(a, tests)
                 } else {
                     empty

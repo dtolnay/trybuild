@@ -247,7 +247,7 @@ enum Expected {
 impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let include = std::env::args().into_iter().collect();
+        let include = std::env::args().collect();
 
         TestCases {
             runner: RefCell::new(Runner {
