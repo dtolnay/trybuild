@@ -229,7 +229,6 @@ pub struct TestCases {
 #[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
-    include: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -247,13 +246,8 @@ enum Expected {
 impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let include = std::env::args().collect();
-
         TestCases {
-            runner: RefCell::new(Runner {
-                tests: Vec::new(),
-                include,
-            }),
+            runner: RefCell::new(Runner { tests: Vec::new() }),
         }
     }
 

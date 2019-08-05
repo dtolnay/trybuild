@@ -1,6 +1,6 @@
 use std::collections::BTreeMap as Map;
 use std::env;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 
@@ -31,8 +31,7 @@ pub struct Project {
 impl Runner {
     pub fn run(&mut self) {
         let mut tests = expand_globs(&self.tests);
-
-        self.drain_filter(&mut tests);
+        filter(&mut tests);
 
         let project = self.prepare(&tests).unwrap_or_else(|err| {
             message::prepare_fail(err);
@@ -59,55 +58,6 @@ impl Runner {
 
         if failures > 0 && project.name != "trybuild-tests" {
             panic!("{} of {} tests failed", failures, len);
-        }
-    }
-
-    // returns vec of removed items so it mimics std's drain_filter some what, and
-    // incase, instead of running nothing you want to run all tests if none are found
-    // matching self.included (trybuild=foo.rs) self.drain_filter returns full ExpandedTest Vec
-    fn drain_filter(&self, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
-        fn _drain_filter(name: Option<&str>, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
-            let mut removed = Vec::new();
-            let old_len = tests.len();
-            let mut pos = 0;
-            let mut count = 0;
-            while count != old_len {
-                let path = tests[pos].test.path.as_path();
-                let found = if let Some(inc_test) = &name {
-                    if let Some(file_name) = path.to_str() {
-                        file_name.contains(inc_test)
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                };
-                if !found {
-                    let del = tests.remove(pos);
-                    removed.push(del);
-                } else {
-                    pos += 1;
-                }
-                count += 1;
-            }
-            removed
-        }
-
-        let empty = Vec::new();
-        if self.include.len() >= 3 {
-            if let Some(f) = self.include.last() {
-                if f.contains("trybuild=") {
-                    let arg: Vec<_> = f.split('=').collect();
-                    let a = arg.last().copied();
-                    _drain_filter(a, tests)
-                } else {
-                    empty
-                }
-            } else {
-                empty
-            }
-        } else {
-            empty
         }
     }
 
@@ -428,4 +378,37 @@ impl ExpandedTest {
             }
         }
     }
+}
+
+// Filter which test cases are run by trybuild.
+//
+//     $ cargo test -- ui trybuild=tuple_structs.rs
+//
+// The first argument after `--` must be the trybuild test name i.e. the name of
+// the function that has the #[test] attribute and calls trybuild. That's to get
+// Cargo to run the test at all. The next argument starting with `trybuild=`
+// provides a filename filter. Only test cases whose filename contains the
+// filter string will be run.
+fn filter(tests: &mut Vec<ExpandedTest>) {
+    let filters = env::args_os()
+        .flat_map(OsString::into_string)
+        .filter_map(|mut arg| {
+            const PREFIX: &str = "trybuild=";
+            if arg.starts_with(PREFIX) && arg != PREFIX {
+                Some(arg.split_off(PREFIX.len()))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>();
+
+    if filters.is_empty() {
+        return;
+    }
+
+    tests.retain(|t| {
+        filters
+            .iter()
+            .any(|f| t.test.path.to_string_lossy().contains(f))
+    });
 }
