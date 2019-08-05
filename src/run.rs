@@ -30,7 +30,9 @@ pub struct Project {
 
 impl Runner {
     pub fn run(&mut self) {
-        let tests = expand_globs(&self.tests);
+        let mut tests = expand_globs(&self.tests);
+
+        self.drain_filter(&mut tests);
 
         let project = self.prepare(&tests).unwrap_or_else(|err| {
             message::prepare_fail(err);
@@ -57,6 +59,55 @@ impl Runner {
 
         if failures > 0 && project.name != "trybuild-tests" {
             panic!("{} of {} tests failed", failures, len);
+        }
+    }
+
+    // returns vec of removed items so it mimics std's drain_filter some what, and
+    // incase, instead of running nothing you want to run all tests if none are found
+    // matching self.included (trybuild=foo.rs) self.drain_filter returns full ExpandedTest Vec
+    fn drain_filter(&self, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
+        fn _drain_filter(name: Option<&str>, tests: &mut Vec<ExpandedTest>) -> Vec<ExpandedTest> {
+            let mut removed = Vec::new();
+            let old_len = tests.len();
+            let mut pos = 0;
+            let mut count = 0;
+            while count != old_len {
+                let path = tests[pos].test.path.as_path();
+                let found = if let Some(inc_test) = &name {
+                    if let Some(file_name) = path.to_str() {
+                        file_name.contains(inc_test)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                if !found {
+                    let del = tests.remove(pos);
+                    removed.push(del);
+                } else {
+                    pos += 1;
+                }
+                count += 1;
+            }
+            removed
+        }
+
+        let empty = Vec::new();
+        if self.include.len() >= 3 {
+            if let Some(f) = self.include.last() {
+                if f.contains("trybuild=") {
+                    let arg: Vec<_> = f.split('=').collect();
+                    let a = arg.last().copied();
+                    _drain_filter(a, tests)
+                } else {
+                    empty
+                }
+            } else {
+                empty
+            }
+        } else {
+            empty
         }
     }
 
