@@ -1,7 +1,10 @@
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use lazy_static::lazy_static;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream as Stream, WriteColor};
+use termcolor::{
+    Color::{self, White},
+    ColorChoice, ColorSpec, StandardStream as Stream, WriteColor,
+};
 
 lazy_static! {
     static ref TERM: Mutex<Stream> = Mutex::new(Stream::stderr(ColorChoice::Auto));
@@ -21,6 +24,10 @@ pub fn color(color: Color) {
 
 pub fn bold_color(color: Color) {
     let _ = lock().set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)));
+}
+
+pub fn bg_color(color: Color) {
+    let _ = lock().set_color(ColorSpec::new().set_fg(Some(White)).set_bg(Some(color)));
 }
 
 pub fn reset() {
