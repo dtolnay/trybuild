@@ -90,7 +90,7 @@ fn filter(line: &str, normalization: Normalization) -> Option<String> {
         }
     }
 
-    if normalization >= StripCouldNotCompile {
+    if normalization >= StripCouldNotCompile2 {
         if line.starts_with("error: could not compile `") {
             return None;
         }
