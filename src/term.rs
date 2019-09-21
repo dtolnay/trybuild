@@ -1,30 +1,30 @@
-use std::sync::{Mutex, MutexGuard, PoisonError};
-
 use lazy_static::lazy_static;
+use std::io::{Result, Write};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream as Stream, WriteColor};
 
 lazy_static! {
-    static ref TERM: Mutex<Stream> = Mutex::new(Stream::stderr(ColorChoice::Auto));
+    static ref TERM: Mutex<Term> = Mutex::new(Term::new());
 }
 
-pub fn lock() -> MutexGuard<'static, Stream> {
+pub fn lock() -> MutexGuard<'static, Term> {
     TERM.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 pub fn bold() {
-    let _ = lock().set_color(ColorSpec::new().set_bold(true));
+    lock().set_color(ColorSpec::new().set_bold(true));
 }
 
 pub fn color(color: Color) {
-    let _ = lock().set_color(ColorSpec::new().set_fg(Some(color)));
+    lock().set_color(ColorSpec::new().set_fg(Some(color)));
 }
 
 pub fn bold_color(color: Color) {
-    let _ = lock().set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)));
+    lock().set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)));
 }
 
 pub fn reset() {
-    let _ = lock().reset();
+    lock().reset();
 }
 
 #[deny(unused_macros)]
@@ -41,4 +41,65 @@ macro_rules! println {
         use std::io::Write;
         let _ = std::writeln!($crate::term::lock(), $($args)*);
     }};
+}
+
+pub struct Term {
+    spec: Option<ColorSpec>,
+    stream: Stream,
+    start_of_line: bool,
+}
+
+impl Term {
+    fn new() -> Self {
+        Term {
+            spec: None,
+            stream: Stream::stderr(ColorChoice::Auto),
+            start_of_line: true,
+        }
+    }
+
+    fn set_color(&mut self, spec: &ColorSpec) {
+        self.spec = Some(spec.clone());
+        self.start_of_line = true;
+    }
+
+    fn reset(&mut self) {
+        self.spec = None;
+        let _ = self.stream.reset();
+    }
+}
+
+impl Write for Term {
+    // Color one line at a time because Travis does not preserve color setting
+    // across output lines.
+    fn write(&mut self, mut buf: &[u8]) -> Result<usize> {
+        let spec = match &self.spec {
+            Some(spec) => spec,
+            None => return self.stream.write(buf),
+        };
+
+        let len = buf.len();
+        while !buf.is_empty() {
+            if self.start_of_line {
+                let _ = self.stream.set_color(spec);
+            }
+            match buf.iter().position(|byte| *byte == b'\n') {
+                Some(line_len) => {
+                    self.stream.write(&buf[..line_len + 1])?;
+                    self.start_of_line = true;
+                    buf = &buf[line_len + 1..];
+                }
+                None => {
+                    self.stream.write(buf)?;
+                    self.start_of_line = false;
+                    break;
+                }
+            }
+        }
+        Ok(len)
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        self.stream.flush()
+    }
 }

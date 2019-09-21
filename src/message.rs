@@ -209,15 +209,7 @@ fn snippet(color: Color, content: &str) {
 
     term::color(color);
     dotted_line();
-
-    // Color one line at a time because Travis does not preserve color setting
-    // across output lines.
-    for line in content.lines() {
-        term::color(color);
-        println!("{}", line);
-    }
-
-    term::color(color);
+    print!("{}", content);
     dotted_line();
     term::reset();
 }
