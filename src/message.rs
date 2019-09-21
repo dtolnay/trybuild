@@ -1,6 +1,7 @@
 use termcolor::Color::{self, *};
 
 use super::{Expected, Test};
+use crate::diff::{Chunk, Diff};
 use crate::error::Error;
 use crate::normalize;
 use crate::term;
@@ -129,13 +130,14 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
+    let diff = Diff::compute(expected, actual);
     term::bold_color(Blue);
     println!("EXPECTED:");
-    snippet(Blue, expected);
+    snippet_diff(Blue, expected, Some(&diff));
     println!();
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
-    snippet(Red, actual);
+    snippet_diff(Red, actual, Some(&diff));
     println!();
 }
 
@@ -203,13 +205,36 @@ pub(crate) fn warnings(warnings: &str) {
 }
 
 fn snippet(color: Color, content: &str) {
+    snippet_diff(color, content, None);
+}
+
+fn snippet_diff(color: Color, content: &str, diff: Option<&Diff>) {
     fn dotted_line() {
         println!("{}", "┈".repeat(60));
     }
 
     term::color(color);
     dotted_line();
-    print!("{}", content);
+
+    match diff {
+        Some(diff) if diff.worth_printing => {
+            for chunk in diff.iter(content) {
+                match chunk {
+                    Chunk::Common(s) => {
+                        term::color(color);
+                        print!("{}", s);
+                    }
+                    Chunk::Unique(s) => {
+                        term::bold_color(color);
+                        print!("\x1B[7m{}", s);
+                    }
+                }
+            }
+        }
+        _ => print!("{}", content),
+    }
+
+    term::color(color);
     dotted_line();
     term::reset();
 }
