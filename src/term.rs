@@ -59,8 +59,10 @@ impl Term {
     }
 
     fn set_color(&mut self, spec: &ColorSpec) {
-        self.spec = Some(spec.clone());
-        self.start_of_line = true;
+        if self.spec.as_ref() != Some(spec) {
+            self.spec = Some(spec.clone());
+            self.start_of_line = true;
+        }
     }
 
     fn reset(&mut self) {
