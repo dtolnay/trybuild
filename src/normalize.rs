@@ -16,7 +16,7 @@ pub fn diagnostics(output: Vec<u8>) -> Variations {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
-    let variations = [Basic, StripCouldNotCompile]
+    let variations = [Basic, StripCouldNotCompile, StripCouldNotCompile2]
         .iter()
         .map(|normalization| apply(&from_bytes, *normalization))
         .collect();
@@ -48,6 +48,7 @@ impl Variations {
 enum Normalization {
     Basic,
     StripCouldNotCompile,
+    StripCouldNotCompile2,
 }
 
 use self::Normalization::*;
@@ -85,6 +86,12 @@ fn filter(line: &str, normalization: Normalization) -> Option<String> {
 
     if normalization >= StripCouldNotCompile {
         if line.starts_with("error: Could not compile `") {
+            return None;
+        }
+    }
+
+    if normalization >= StripCouldNotCompile {
+        if line.starts_with("error: could not compile `") {
             return None;
         }
     }
