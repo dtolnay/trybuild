@@ -44,7 +44,7 @@ macro_rules! println {
 }
 
 pub struct Term {
-    spec: Option<ColorSpec>,
+    spec: ColorSpec,
     stream: Stream,
     start_of_line: bool,
 }
@@ -52,21 +52,21 @@ pub struct Term {
 impl Term {
     fn new() -> Self {
         Term {
-            spec: None,
+            spec: ColorSpec::new(),
             stream: Stream::stderr(ColorChoice::Auto),
             start_of_line: true,
         }
     }
 
     fn set_color(&mut self, spec: &ColorSpec) {
-        if self.spec.as_ref() != Some(spec) {
-            self.spec = Some(spec.clone());
+        if self.spec != *spec {
+            self.spec = spec.clone();
             self.start_of_line = true;
         }
     }
 
     fn reset(&mut self) {
-        self.spec = None;
+        self.spec = ColorSpec::new();
         let _ = self.stream.reset();
     }
 }
@@ -75,15 +75,14 @@ impl Write for Term {
     // Color one line at a time because Travis does not preserve color setting
     // across output lines.
     fn write(&mut self, mut buf: &[u8]) -> Result<usize> {
-        let spec = match &self.spec {
-            Some(spec) => spec,
-            None => return self.stream.write(buf),
-        };
+        if self.spec.is_none() {
+            return self.stream.write(buf);
+        }
 
         let len = buf.len();
         while !buf.is_empty() {
             if self.start_of_line {
-                let _ = self.stream.set_color(spec);
+                let _ = self.stream.set_color(&self.spec);
             }
             match buf.iter().position(|byte| *byte == b'\n') {
                 Some(line_len) => {
