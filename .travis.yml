@@ -17,3 +17,7 @@ matrix:
       os: osx
     - rust: nightly
       os: windows
+  allow_failures:
+    # macOS build temporarily disabled due to Cargo bug:
+    # https://github.com/rust-lang/cargo/issues/7427
+    - os: osx
