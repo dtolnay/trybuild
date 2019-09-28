@@ -204,6 +204,7 @@ impl Test {
             stderr
                 .replace(&name.0, "$CRATE")
                 .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
+                .replace(project.workspace.to_string_lossy().as_ref(), "$WORKSPACE")
         });
 
         let check = match self.expected {
