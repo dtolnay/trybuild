@@ -32,6 +32,7 @@ pub fn diagnostics(output: Vec<u8>) -> Variations {
         StripCouldNotCompile,
         StripCouldNotCompile2,
         StripForMoreInformation,
+        StripForMoreInformation2,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization))
@@ -66,6 +67,7 @@ enum Normalization {
     StripCouldNotCompile,
     StripCouldNotCompile2,
     StripForMoreInformation,
+    StripForMoreInformation2,
 }
 
 use self::Normalization::*;
@@ -115,6 +117,15 @@ fn filter(line: &str, normalization: Normalization) -> Option<String> {
 
     if normalization >= StripForMoreInformation {
         if line.starts_with("For more information about this error, try `rustc --explain") {
+            return None;
+        }
+    }
+
+    if normalization >= StripForMoreInformation2 {
+        if line.starts_with("Some errors have detailed explanations:") {
+            return None;
+        }
+        if line.starts_with("For more information about an error, try `rustc --explain") {
             return None;
         }
     }
