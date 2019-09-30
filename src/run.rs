@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::features;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
-use crate::normalize::{self, Variations};
+use crate::normalize::{self, Variable, Variations};
 use crate::rustflags;
 
 #[derive(Debug)]
@@ -200,12 +200,20 @@ impl Test {
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
         let stdout = output.stdout;
-        let stderr = normalize::diagnostics(output.stderr).map(|stderr| {
-            stderr
-                .replace(&name.0, "$CRATE")
-                .replace(project.source_dir.to_string_lossy().as_ref(), "$DIR")
-                .replace(project.workspace.to_string_lossy().as_ref(), "$WORKSPACE")
-        });
+        let stderr = normalize::diagnostics(output.stderr, &[
+            Variable {
+                name: "$CRATE",
+                value: name.0.clone(),
+            },
+            Variable {
+                name: "$DIR",
+                value: project.source_dir.to_string_lossy().into_owned(),
+            },
+            Variable {
+                name: "WORKSPACE",
+                value: project.workspace.to_string_lossy().into_owned(),
+            },
+        ]);
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,

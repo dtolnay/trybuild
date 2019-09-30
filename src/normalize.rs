@@ -1,3 +1,8 @@
+pub struct Variable {
+    pub name: &'static str,
+    pub value: String,
+}
+
 pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     let bytes = output.as_ref();
     let mut normalized = String::from_utf8_lossy(bytes).to_string();
@@ -23,7 +28,7 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
 ///
 /// There is one "preferred" variation which is what we print when the stderr
 /// file is absent or not a match.
-pub fn diagnostics(output: Vec<u8>) -> Variations {
+pub fn diagnostics(output: Vec<u8>, context: &[Variable]) -> Variations {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
@@ -35,7 +40,7 @@ pub fn diagnostics(output: Vec<u8>) -> Variations {
         StripForMoreInformation2,
     ]
     .iter()
-    .map(|normalization| apply(&from_bytes, *normalization))
+    .map(|normalization| apply(&from_bytes, *normalization, context))
     .collect();
 
     Variations { variations }
@@ -46,12 +51,6 @@ pub struct Variations {
 }
 
 impl Variations {
-    pub fn map<F: FnMut(String) -> String>(self, f: F) -> Self {
-        Variations {
-            variations: self.variations.into_iter().map(f).collect(),
-        }
-    }
-
     pub fn preferred(&self) -> &str {
         self.variations.last().unwrap()
     }
@@ -72,11 +71,11 @@ enum Normalization {
 
 use self::Normalization::*;
 
-fn apply(original: &str, normalization: Normalization) -> String {
+fn apply(original: &str, normalization: Normalization, context: &[Variable]) -> String {
     let mut normalized = String::new();
 
     for line in original.lines() {
-        if let Some(line) = filter(line, normalization) {
+        if let Some(line) = filter(line, normalization, context) {
             normalized += &line;
             if !normalized.ends_with("\n\n") {
                 normalized.push('\n');
@@ -87,7 +86,7 @@ fn apply(original: &str, normalization: Normalization) -> String {
     trim(normalized)
 }
 
-fn filter(line: &str, normalization: Normalization) -> Option<String> {
+fn filter(line: &str, normalization: Normalization, context: &[Variable]) -> Option<String> {
     if line.trim_start().starts_with("--> ") {
         if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
             let cut_start = line.find('>').unwrap() + 2;
@@ -130,5 +129,10 @@ fn filter(line: &str, normalization: Normalization) -> Option<String> {
         }
     }
 
-    Some(line.to_owned())
+    let mut line = line.to_owned();
+    for var in context {
+        line = line.replace(var.name, &var.value);
+    }
+
+    Some(line)
 }
