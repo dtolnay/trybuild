@@ -1,6 +1,10 @@
-pub struct Variable {
-    pub name: &'static str,
-    pub value: String,
+use std::path::Path;
+
+#[derive(Copy, Clone)]
+pub struct Context<'a> {
+    pub krate: &'a str,
+    pub source_dir: &'a Path,
+    pub workspace: &'a Path,
 }
 
 pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
@@ -28,7 +32,7 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
 ///
 /// There is one "preferred" variation which is what we print when the stderr
 /// file is absent or not a match.
-pub fn diagnostics(output: Vec<u8>, context: &[Variable]) -> Variations {
+pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
@@ -71,7 +75,7 @@ enum Normalization {
 
 use self::Normalization::*;
 
-fn apply(original: &str, normalization: Normalization, context: &[Variable]) -> String {
+fn apply(original: &str, normalization: Normalization, context: Context) -> String {
     let mut normalized = String::new();
 
     for line in original.lines() {
@@ -86,7 +90,7 @@ fn apply(original: &str, normalization: Normalization, context: &[Variable]) -> 
     trim(normalized)
 }
 
-fn filter(line: &str, normalization: Normalization, context: &[Variable]) -> Option<String> {
+fn filter(line: &str, normalization: Normalization, context: Context) -> Option<String> {
     if line.trim_start().starts_with("--> ") {
         if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
             let cut_start = line.find('>').unwrap() + 2;
@@ -129,10 +133,10 @@ fn filter(line: &str, normalization: Normalization, context: &[Variable]) -> Opt
         }
     }
 
-    let mut line = line.to_owned();
-    for var in context {
-        line = line.replace(var.name, &var.value);
-    }
+    let line = line
+        .replace("$CRATE", context.krate)
+        .replace("$DIR", context.source_dir.to_string_lossy().as_ref())
+        .replace("$WORKSPACE", context.workspace.to_string_lossy().as_ref());
 
     Some(line)
 }
