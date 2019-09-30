@@ -12,6 +12,17 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     normalized
 }
 
+/// For a given compiler output, produces the set of saved outputs against which
+/// the compiler's output would be considered correct. If the test's saved
+/// stderr file is identical to any one of these variations, the test will pass.
+///
+/// This is a set rather than just one normalized output in order to avoid
+/// breaking existing tests when introducing new normalization steps. Someone
+/// may have saved stderr snapshots with an older version of trybuild, and those
+/// tests need to continue to pass with newer versions of trybuild.
+///
+/// There is one "preferred" variation which is what we print when the stderr
+/// file is absent or not a match.
 pub fn diagnostics(output: Vec<u8>) -> Variations {
     let mut from_bytes = String::from_utf8_lossy(&output).to_string();
     from_bytes = from_bytes.replace("\r\n", "\n");
