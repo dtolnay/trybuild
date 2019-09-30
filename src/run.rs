@@ -200,20 +200,23 @@ impl Test {
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
         let stdout = output.stdout;
-        let stderr = normalize::diagnostics(output.stderr, &[
-            Variable {
-                name: "$CRATE",
-                value: name.0.clone(),
-            },
-            Variable {
-                name: "$DIR",
-                value: project.source_dir.to_string_lossy().into_owned(),
-            },
-            Variable {
-                name: "WORKSPACE",
-                value: project.workspace.to_string_lossy().into_owned(),
-            },
-        ]);
+        let stderr = normalize::diagnostics(
+            output.stderr,
+            &[
+                Variable {
+                    name: "$CRATE",
+                    value: name.0.clone(),
+                },
+                Variable {
+                    name: "$DIR",
+                    value: project.source_dir.to_string_lossy().into_owned(),
+                },
+                Variable {
+                    name: "WORKSPACE",
+                    value: project.workspace.to_string_lossy().into_owned(),
+                },
+            ],
+        );
 
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
