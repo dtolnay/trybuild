@@ -98,6 +98,10 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
         }
     }
 
+    if line.trim_start().starts_with("::: ") {
+        return Some(line.replace('\\', "/"));
+    }
+
     if line.starts_with("error: aborting due to ") {
         return None;
     }
@@ -134,9 +138,9 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
     }
 
     let line = line
-        .replace("$CRATE", context.krate)
-        .replace("$DIR", context.source_dir.to_string_lossy().as_ref())
-        .replace("$WORKSPACE", context.workspace.to_string_lossy().as_ref());
+        .replace(context.krate, "$CRATE")
+        .replace(context.source_dir.to_string_lossy().as_ref(), "$DIR")
+        .replace(&context.workspace.to_string_lossy().as_ref().replace('\\', "/"), "$WORKSPACE");
 
     Some(line)
 }
