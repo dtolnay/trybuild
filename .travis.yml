@@ -20,7 +20,3 @@ matrix:
       script:
         - cargo update -Z minimal-versions
         - cargo check
-  allow_failures:
-    # macOS build temporarily disabled due to Cargo bug:
-    # https://github.com/rust-lang/cargo/issues/7427
-    - os: osx
