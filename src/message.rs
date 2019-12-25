@@ -6,6 +6,7 @@ use crate::error::Error;
 use crate::normalize;
 use crate::term;
 
+use std::env;
 use std::path::Path;
 use std::process::Output;
 
@@ -130,7 +131,12 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
-    let diff = Diff::compute(expected, actual);
+    let diff = if env::var_os("TERM").map_or(true, |term| term == "dumb") {
+        // No diff in dumb terminal or when TERM is unset.
+        None
+    } else {
+        Diff::compute(expected, actual)
+    };
     term::bold_color(Blue);
     println!("EXPECTED:");
     snippet_diff(Blue, expected, diff.as_ref());
