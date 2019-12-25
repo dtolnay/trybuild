@@ -6,7 +6,6 @@ use crate::error::Error;
 use crate::normalize;
 use crate::term;
 
-use std::panic;
 use std::path::Path;
 use std::process::Output;
 
@@ -131,13 +130,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
-    let diff = if expected.len() + actual.len() <= 2048 {
-        // We don't yet trust the dissimilar crate to work well on large inputs
-        // or non-ascii inputs.
-        panic::catch_unwind(|| Diff::compute(expected, actual)).ok()
-    } else {
-        None
-    };
+    let diff = Diff::compute(expected, actual);
     term::bold_color(Blue);
     println!("EXPECTED:");
     snippet_diff(Blue, expected, diff.as_ref());
@@ -224,7 +217,7 @@ fn snippet_diff(color: Color, content: &str, diff: Option<&Diff>) {
     dotted_line();
 
     match diff {
-        Some(diff) if diff.worth_printing => {
+        Some(diff) => {
             for chunk in diff.iter(content) {
                 match chunk {
                     Render::Common(s) => {
@@ -238,7 +231,7 @@ fn snippet_diff(color: Color, content: &str, diff: Option<&Diff>) {
                 }
             }
         }
-        _ => print!("{}", content),
+        None => print!("{}", content),
     }
 
     term::color(color);

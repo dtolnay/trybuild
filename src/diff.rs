@@ -10,17 +10,24 @@ mod r#impl {
     use super::Render;
     use dissimilar::Chunk;
     use std::cmp;
+    use std::panic;
 
     pub struct Diff<'a> {
-        pub worth_printing: bool,
         expected: &'a str,
         actual: &'a str,
         diff: Vec<Chunk<'a>>,
     }
 
     impl<'a> Diff<'a> {
-        pub fn compute(expected: &'a str, actual: &'a str) -> Self {
-            let diff = dissimilar::diff(expected, actual);
+        pub fn compute(expected: &'a str, actual: &'a str) -> Option<Self> {
+            if expected.len() + actual.len() > 2048 {
+                // We don't yet trust the dissimilar crate to work well on large
+                // inputs.
+                return None;
+            }
+
+            // Nor on non-ascii inputs.
+            let diff = panic::catch_unwind(|| dissimilar::diff(expected, actual)).ok()?;
 
             let mut common_len = 0;
             for chunk in &diff {
@@ -31,13 +38,15 @@ mod r#impl {
 
             let bigger_len = cmp::max(expected.len(), actual.len());
             let worth_printing = 5 * common_len >= 4 * bigger_len;
+            if !worth_printing {
+                return None;
+            }
 
-            Diff {
-                worth_printing,
+            Some(Diff {
                 expected,
                 actual,
                 diff,
-            }
+            })
         }
 
         pub fn iter<'i>(&'i self, input: &str) -> impl Iterator<Item = Render<'a>> + 'i {
@@ -57,21 +66,17 @@ mod r#impl {
 mod r#impl {
     use super::Render;
 
-    pub struct Diff {
-        pub worth_printing: bool,
-    }
+    pub enum Diff {}
 
     impl Diff {
-        pub fn compute(_expected: &str, _actual: &str) -> Self {
-            Diff {
-                worth_printing: false,
-            }
+        pub fn compute(_expected: &str, _actual: &str) -> Option<Self> {
+            None
         }
 
-        pub fn iter(&self, _input: &str) -> impl Iterator<Item = Render<'static>> {
+        pub fn iter(&self, _input: &str) -> Box<dyn Iterator<Item = Render>> {
             let _ = Render::Common;
             let _ = Render::Unique;
-            [].iter()
+            match *self {}
         }
     }
 }
