@@ -5,7 +5,7 @@ pub enum Render<'a> {
     Unique(&'a str),
 }
 
-#[cfg(feature = "diff")]
+#[cfg(all(feature = "diff", not(windows)))]
 mod r#impl {
     use super::Render;
     use dissimilar::Chunk;
@@ -62,7 +62,7 @@ mod r#impl {
     }
 }
 
-#[cfg(not(feature = "diff"))]
+#[cfg(any(not(feature = "diff"), windows))]
 mod r#impl {
     use super::Render;
 
