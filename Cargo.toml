@@ -14,7 +14,6 @@ readme = "README.md"
 travis-ci = { repository = "dtolnay/trybuild" }
 
 [features]
-default = ["diff"]
 diff = ["dissimilar"]
 
 [dependencies]
