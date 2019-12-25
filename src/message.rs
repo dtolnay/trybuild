@@ -6,6 +6,7 @@ use crate::error::Error;
 use crate::normalize;
 use crate::term;
 
+use std::panic;
 use std::path::Path;
 use std::process::Output;
 
@@ -131,8 +132,9 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     term::reset();
     println!();
     let diff = if expected.len() + actual.len() <= 2048 {
-        // We don't yet trust the dissimilar crate to work well on large inputs.
-        Some(Diff::compute(expected, actual))
+        // We don't yet trust the dissimilar crate to work well on large inputs
+        // or non-ascii inputs.
+        panic::catch_unwind(|| Diff::compute(expected, actual)).ok()
     } else {
         None
     };
