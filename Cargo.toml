@@ -10,6 +10,9 @@ documentation = "https://docs.rs/trybuild"
 exclude = ["screenshots/*"]
 readme = "README.md"
 
+[badges]
+travis-ci = { repository = "dtolnay/trybuild" }
+
 [dependencies]
 glob = "0.3"
 lazy_static = "1.3"
