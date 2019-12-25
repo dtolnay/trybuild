@@ -1,125 +1,61 @@
 pub use self::r#impl::Diff;
 
-pub enum Chunk<'a> {
+pub enum Render<'a> {
     Common(&'a str),
     Unique(&'a str),
 }
 
 #[cfg(feature = "diff")]
 mod r#impl {
-    use super::Chunk;
-    use diffr_lib::{diff, tokenize, DiffInput, HashedSpan, Snake, Tokenization};
+    use super::Render;
+    use dissimilar::Chunk;
     use std::cmp;
-    use std::iter::Peekable;
-    use std::slice;
 
     pub struct Diff<'a> {
         pub worth_printing: bool,
         expected: &'a str,
-        expected_tokens: Vec<HashedSpan>,
         actual: &'a str,
-        actual_tokens: Vec<HashedSpan>,
-        common: Vec<Snake>,
+        diff: Vec<Chunk<'a>>,
     }
 
     impl<'a> Diff<'a> {
         pub fn compute(expected: &'a str, actual: &'a str) -> Self {
-            let mut actual_tokens = Vec::new();
-            tokenize(actual.as_bytes(), 0, &mut actual_tokens);
-            let added = Tokenization::new(actual.as_bytes(), &actual_tokens);
+            let diff = dissimilar::diff(expected, actual);
 
-            let mut expected_tokens = Vec::new();
-            tokenize(expected.as_bytes(), 0, &mut expected_tokens);
-            let removed = Tokenization::new(expected.as_bytes(), &expected_tokens);
+            let mut common_len = 0;
+            for chunk in &diff {
+                if let Chunk::Equal(common) = chunk {
+                    common_len += common.len();
+                }
+            }
 
-            let input = DiffInput { added, removed };
-            let mut scratch = Vec::new();
-            let mut common = Vec::new();
-            diff(&input, &mut scratch, &mut common);
-
-            let min_len = cmp::max(expected_tokens.len(), actual_tokens.len());
-            let common_len = common.iter().map(|snake| snake.len).sum::<isize>() as usize;
-            let worth_printing = common_len / 4 >= min_len / 5;
+            let bigger_len = cmp::max(expected.len(), actual.len());
+            let worth_printing = 5 * common_len >= 4 * bigger_len;
 
             Diff {
                 worth_printing,
                 expected,
-                expected_tokens,
                 actual,
-                actual_tokens,
-                common,
+                diff,
             }
         }
 
-        pub fn iter(&self, input: &str) -> Iter {
-            if input == self.expected {
-                Iter {
-                    pos: 0,
-                    input: self.expected,
-                    tokens: &self.expected_tokens,
-                    common: self.common.iter().peekable(),
-                    token_index: |snake| snake.x0,
-                }
-            } else if input == self.actual {
-                Iter {
-                    pos: 0,
-                    input: self.actual,
-                    tokens: &self.actual_tokens,
-                    common: self.common.iter().peekable(),
-                    token_index: |snake| snake.y0,
-                }
-            } else {
-                panic!("unrecognized input");
-            }
-        }
-    }
-
-    pub struct Iter<'a> {
-        pos: usize,
-        input: &'a str,
-        tokens: &'a [HashedSpan],
-        common: Peekable<slice::Iter<'a, Snake>>,
-        token_index: fn(&Snake) -> isize,
-    }
-
-    impl<'a> Iterator for Iter<'a> {
-        type Item = Chunk<'a>;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            match self.common.peek() {
-                Some(common) => {
-                    let index = (self.token_index)(common);
-                    let begin = &self.tokens[index as usize];
-                    if self.pos < begin.lo {
-                        let chunk = &self.input[self.pos..begin.lo];
-                        self.pos = begin.lo;
-                        Some(Chunk::Unique(chunk))
-                    } else {
-                        let index = (self.token_index)(common) + common.len - 1;
-                        let end = &self.tokens[index as usize];
-                        let chunk = &self.input[begin.lo..end.hi];
-                        self.common.next().unwrap();
-                        self.pos = end.hi;
-                        Some(Chunk::Common(chunk))
-                    }
-                }
-                None => {
-                    if self.pos < self.input.len() {
-                        let chunk = &self.input[self.pos..];
-                        self.pos = self.input.len();
-                        Some(Chunk::Unique(chunk))
-                    } else {
-                        None
-                    }
-                }
-            }
+        pub fn iter<'i>(&'i self, input: &str) -> impl Iterator<Item = Render<'a>> + 'i {
+            let expected = input == self.expected;
+            let actual = input == self.actual;
+            self.diff.iter().filter_map(move |chunk| match chunk {
+                Chunk::Equal(common) => Some(Render::Common(common)),
+                Chunk::Delete(unique) if expected => Some(Render::Unique(unique)),
+                Chunk::Insert(unique) if actual => Some(Render::Unique(unique)),
+                _ => None,
+            })
         }
     }
 }
 
 #[cfg(not(feature = "diff"))]
 mod r#impl {
-    use super::Chunk;
+    use super::Render;
 
     pub struct Diff {
         pub worth_printing: bool,
@@ -132,10 +68,10 @@ mod r#impl {
             }
         }
 
-        pub fn iter(&self, _input: &str) -> &[Chunk] {
-            let _ = Chunk::Common;
-            let _ = Chunk::Unique;
-            &[]
+        pub fn iter(&self, _input: &str) -> impl Iterator<Item = Render<'static>> {
+            let _ = Render::Common;
+            let _ = Render::Unique;
+            [].iter()
         }
     }
 }

@@ -1,7 +1,7 @@
 use termcolor::Color::{self, *};
 
 use super::{Expected, Test};
-use crate::diff::{Chunk, Diff};
+use crate::diff::{Diff, Render};
 use crate::error::Error;
 use crate::normalize;
 use crate::term;
@@ -220,11 +220,11 @@ fn snippet_diff(color: Color, content: &str, diff: Option<&Diff>) {
         Some(diff) if diff.worth_printing => {
             for chunk in diff.iter(content) {
                 match chunk {
-                    Chunk::Common(s) => {
+                    Render::Common(s) => {
                         term::color(color);
                         print!("{}", s);
                     }
-                    Chunk::Unique(s) => {
+                    Render::Unique(s) => {
                         term::bold_color(color);
                         print!("\x1B[7m{}", s);
                     }
