@@ -208,6 +208,7 @@ mod path;
 
 mod cargo;
 mod dependencies;
+mod diff;
 mod env;
 mod error;
 mod features;

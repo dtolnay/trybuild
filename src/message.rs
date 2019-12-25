@@ -1,10 +1,12 @@
 use termcolor::Color::{self, *};
 
 use super::{Expected, Test};
+use crate::diff::{Diff, Render};
 use crate::error::Error;
 use crate::normalize;
 use crate::term;
 
+use std::env;
 use std::path::Path;
 use std::process::Output;
 
@@ -129,13 +131,19 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
+    let diff = if env::var_os("TERM").map_or(true, |term| term == "dumb") {
+        // No diff in dumb terminal or when TERM is unset.
+        None
+    } else {
+        Diff::compute(expected, actual)
+    };
     term::bold_color(Blue);
     println!("EXPECTED:");
-    snippet(Blue, expected);
+    snippet_diff(Blue, expected, diff.as_ref());
     println!();
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
-    snippet(Red, actual);
+    snippet_diff(Red, actual, diff.as_ref());
     println!();
 }
 
@@ -203,13 +211,36 @@ pub(crate) fn warnings(warnings: &str) {
 }
 
 fn snippet(color: Color, content: &str) {
+    snippet_diff(color, content, None);
+}
+
+fn snippet_diff(color: Color, content: &str, diff: Option<&Diff>) {
     fn dotted_line() {
         println!("{}", "┈".repeat(60));
     }
 
     term::color(color);
     dotted_line();
-    print!("{}", content);
+
+    match diff {
+        Some(diff) => {
+            for chunk in diff.iter(content) {
+                match chunk {
+                    Render::Common(s) => {
+                        term::color(color);
+                        print!("{}", s);
+                    }
+                    Render::Unique(s) => {
+                        term::bold_color(color);
+                        print!("\x1B[7m{}", s);
+                    }
+                }
+            }
+        }
+        None => print!("{}", content),
+    }
+
+    term::color(color);
     dotted_line();
     term::reset();
 }
