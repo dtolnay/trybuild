@@ -130,14 +130,19 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
-    let diff = Diff::compute(expected, actual);
+    let diff = if expected.len() + actual.len() <= 2048 {
+        // We don't yet trust the dissimilar crate to work well on large inputs.
+        Some(Diff::compute(expected, actual))
+    } else {
+        None
+    };
     term::bold_color(Blue);
     println!("EXPECTED:");
-    snippet_diff(Blue, expected, Some(&diff));
+    snippet_diff(Blue, expected, diff.as_ref());
     println!();
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
-    snippet_diff(Red, actual, Some(&diff));
+    snippet_diff(Red, actual, diff.as_ref());
     println!();
 }
 
