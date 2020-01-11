@@ -24,4 +24,11 @@ fn test() {
         "fn main() { compile_error!(\"ERROR\"); }",
         "tests/ui/inline_compile_fail.stderr",
     );
+    t.compile_fail_check_sub("tests/ui/compile-fail-0.rs", "compile_error!");
+    t.compile_fail_check_sub("tests/ui/compile-fail-0.rs", "I'm not here!");
+    t.compile_fail_inline_check_sub(
+        "inline_compile_fail_sub",
+        "fn main() { compile_error!(\"tadam\"); }",
+        "compile_error!(\"tadam"
+    );
 }

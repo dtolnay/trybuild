@@ -5,7 +5,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use super::{Expected, FileTest, InlineTest, Runner, Test};
+use super::{Expected, FileTest, InlineTest, Runner, Test, TestKind};
 use crate::cargo;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
@@ -72,8 +72,9 @@ impl Runner {
         let mut has_pass = false;
         let mut has_compile_fail = false;
         for e in tests {
-            match e.test.expected() {
+            match e.test.expected {
                 Expected::Pass => has_pass = true,
+                Expected::CompileFailSubString(_) |
                 Expected::CompileFail => has_compile_fail = true,
             }
         }
@@ -175,9 +176,9 @@ impl Runner {
             if expanded.error.is_none() {
                 manifest.bins.push(Bin {
                     name: expanded.name.clone(),
-                    path: match expanded.test {
-                        Test::File(ref t) => project.source_dir.join(&t.path),
-                        Test::Inline(ref t) => project.dir.join(&format!("{}.rs", t.name)),
+                    path: match expanded.test.inner {
+                        TestKind::File(ref t) => project.source_dir.join(&t.path),
+                        TestKind::Inline(ref t) => project.dir.join(&format!("{}.rs", t.name)),
                     }
                 });
             }
@@ -200,17 +201,12 @@ impl Test {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
 
-        let expected = match self {
-            Test::File(FileTest { path, expected }) => {
-                check_exists(&path)?;
-                *expected
-            }
-            Test::Inline(t) => {
-                create_inline_test(t, project)?;
-                t.expected
-            }
+        match self.inner {
+            TestKind::File(FileTest { ref path }) => check_exists(&path)?,
+            TestKind::Inline(ref t) => create_inline_test(t, project)?,
         };
 
+        let expected = self.expected.clone();
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
         let stdout = output.stdout;
@@ -223,12 +219,15 @@ impl Test {
             },
         );
 
-        let check = match expected {
-            Expected::Pass => Test::check_pass,
-            Expected::CompileFail => Test::check_compile_fail,
-        };
-
-        check(self, project, name, success, stdout, stderr)
+        match expected {
+            Expected::Pass => Test::check_pass(self, project, name, success, stdout, stderr),
+            Expected::CompileFail => {
+                Test::check_compile_fail(self, project, name, success, stdout, stderr)
+            }
+            Expected::CompileFailSubString(s) => {
+                Test::check_compile_fail_sub_str(self, name, success, stdout, stderr, &s)
+            }
+        }
     }
 
     fn check_pass(
@@ -263,14 +262,7 @@ impl Test {
         build_stdout: Vec<u8>,
         variations: Variations,
     ) -> Result<()> {
-        let preferred = variations.preferred();
-
-        if success {
-            message::should_not_have_compiled();
-            message::fail_output(Fail, &build_stdout);
-            message::warnings(preferred);
-            return Err(Error::ShouldNotHaveCompiled);
-        }
+        let preferred = check_success(success, &build_stdout, &variations)?;
 
         let stderr_path = self.stderr_path();
 
@@ -285,12 +277,12 @@ impl Test {
                         .file_name()
                         .unwrap_or_else(|| OsStr::new("test.stderr"));
                     let wip_path = wip_dir.join(stderr_name);
-                    message::write_stderr_wip(&wip_path, &stderr_path, preferred);
-                    fs::write(wip_path, preferred).map_err(Error::WriteStderr)?;
+                    message::write_stderr_wip(&wip_path, &stderr_path, &preferred);
+                    fs::write(wip_path, &preferred).map_err(Error::WriteStderr)?;
                 }
                 Update::Overwrite => {
-                    message::overwrite_stderr(&stderr_path, preferred);
-                    fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
+                    message::overwrite_stderr(&stderr_path, &preferred);
+                    fs::write(stderr_path, &preferred).map_err(Error::WriteStderr)?;
                 }
             }
             message::fail_output(Warn, &build_stdout);
@@ -308,15 +300,49 @@ impl Test {
 
         match project.update {
             Update::Wip => {
-                message::mismatch(&expected, preferred);
+                message::mismatch(&expected, &preferred, "");
                 Err(Error::Mismatch)
             }
             Update::Overwrite => {
-                message::overwrite_stderr(&stderr_path, preferred);
-                fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
+                message::overwrite_stderr(&stderr_path, &preferred);
+                fs::write(stderr_path, &preferred).map_err(Error::WriteStderr)?;
                 Ok(())
             }
         }
+    }
+
+    fn check_compile_fail_sub_str(
+        &self,
+        _name: &Name,
+        success: bool,
+        build_stdout: Vec<u8>,
+        variations: Variations,
+        expected: &str,
+    ) -> Result<()> {
+        let preferred = check_success(success, &build_stdout, &variations)?;
+
+        let expected = expected.replace("\r\n", "\n");
+
+        if variations.any(|stderr| stderr.contains(&expected)) {
+            message::ok();
+            Ok(())
+        } else {
+            message::mismatch(&format!("{}\n", expected), &preferred, " SUBSTRING TO FIND");
+            Err(Error::Mismatch)
+        }
+    }
+}
+
+fn check_success(success: bool, build_stdout: &[u8], variations: &Variations) -> Result<String> {
+    let preferred = variations.preferred();
+
+    if success {
+        message::should_not_have_compiled();
+        message::fail_output(Fail, &build_stdout);
+        message::warnings(preferred);
+        Err(Error::ShouldNotHaveCompiled)
+    } else {
+        Ok(preferred.to_owned())
     }
 }
 
@@ -330,15 +356,14 @@ fn check_exists(path: &Path) -> Result<()> {
     }
 }
 
-fn create_inline_test(test: &InlineTest, project: &Project) -> Result<PathBuf> {
+fn create_inline_test(test: &InlineTest, project: &Project) -> Result<()> {
     let path = path!(project.dir / format!("{}.rs", test.name));
     let mut file = OpenOptions::new()
         .write(true)
         .truncate(true)
         .create(true)
         .open(&path).map_err(Error::FileCreation)?;
-    write!(file, "{}", test.code).map_err(Error::FileCreation)?;
-    Ok(path)
+    write!(file, "{}", test.code).map_err(Error::FileCreation)
 }
 
 #[derive(Debug)]
@@ -364,23 +389,31 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     let mut vec = Vec::new();
 
     for test in tests {
-        if let Test::File(test) = test {
+        if test.is_inline() {
+            vec.push(ExpandedTest {
+                name: bin_name(vec.len()),
+                test: test.clone(),
+                error: None,
+            });
+        } else {
             let mut expanded = ExpandedTest {
                 name: bin_name(vec.len()),
-                test: Test::File(test.clone()),
+                test: test.clone(),
                 error: None,
             };
-            if let Some(utf8) = test.path.to_str() {
+            if let Some(utf8) = test.path().to_str() {
                 if utf8.contains('*') {
                     match glob(utf8) {
                         Ok(paths) => {
                             for path in paths {
                                 vec.push(ExpandedTest {
                                     name: bin_name(vec.len()),
-                                    test: Test::File(FileTest {
-                                        path,
-                                        expected: expanded.test.expected(),
-                                    }),
+                                    test: Test {
+                                        expected: expanded.test.expected.clone(),
+                                        inner: TestKind::File(FileTest {
+                                            path,
+                                        }),
+                                    },
                                     error: None,
                                 });
                             }
@@ -391,12 +424,6 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                 }
             }
             vec.push(expanded);
-        } else {
-            vec.push(ExpandedTest {
-                name: bin_name(vec.len()),
-                test: test.clone(),
-                error: None,
-            });
         }
     }
 
