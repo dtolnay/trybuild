@@ -1,10 +1,11 @@
 use std::collections::BTreeMap as Map;
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use super::{Expected, Runner, Test};
+use super::{Expected, FileTest, InlineTest, Runner, Test};
 use crate::cargo;
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
@@ -71,7 +72,7 @@ impl Runner {
         let mut has_pass = false;
         let mut has_compile_fail = false;
         for e in tests {
-            match e.test.expected {
+            match e.test.expected() {
                 Expected::Pass => has_pass = true,
                 Expected::CompileFail => has_compile_fail = true,
             }
@@ -174,7 +175,10 @@ impl Runner {
             if expanded.error.is_none() {
                 manifest.bins.push(Bin {
                     name: expanded.name.clone(),
-                    path: project.source_dir.join(&expanded.test.path),
+                    path: match expanded.test {
+                        Test::File(ref t) => project.source_dir.join(&t.path),
+                        Test::Inline(ref t) => project.dir.join(&format!("{}.rs", t.name)),
+                    }
                 });
             }
         }
@@ -195,7 +199,17 @@ impl Test {
     fn run(&self, project: &Project, name: &Name) -> Result<()> {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
-        check_exists(&self.path)?;
+
+        let expected = match self {
+            Test::File(FileTest { path, expected }) => {
+                check_exists(&path)?;
+                *expected
+            }
+            Test::Inline(t) => {
+                create_inline_test(t, project)?;
+                t.expected
+            }
+        };
 
         let output = cargo::build_test(project, name)?;
         let success = output.status.success();
@@ -209,7 +223,7 @@ impl Test {
             },
         );
 
-        let check = match self.expected {
+        let check = match expected {
             Expected::Pass => Test::check_pass,
             Expected::CompileFail => Test::check_compile_fail,
         };
@@ -258,7 +272,7 @@ impl Test {
             return Err(Error::ShouldNotHaveCompiled);
         }
 
-        let stderr_path = self.path.with_extension("stderr");
+        let stderr_path = self.stderr_path();
 
         if !stderr_path.exists() {
             match project.update {
@@ -316,6 +330,17 @@ fn check_exists(path: &Path) -> Result<()> {
     }
 }
 
+fn create_inline_test(test: &InlineTest, project: &Project) -> Result<PathBuf> {
+    let path = path!(project.dir / format!("{}.rs", test.name));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&path).map_err(Error::FileCreation)?;
+    write!(file, "{}", test.code).map_err(Error::FileCreation)?;
+    Ok(path)
+}
+
 #[derive(Debug)]
 struct ExpandedTest {
     name: Name,
@@ -339,32 +364,40 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     let mut vec = Vec::new();
 
     for test in tests {
-        let mut expanded = ExpandedTest {
-            name: bin_name(vec.len()),
-            test: test.clone(),
-            error: None,
-        };
-        if let Some(utf8) = test.path.to_str() {
-            if utf8.contains('*') {
-                match glob(utf8) {
-                    Ok(paths) => {
-                        for path in paths {
-                            vec.push(ExpandedTest {
-                                name: bin_name(vec.len()),
-                                test: Test {
-                                    path,
-                                    expected: expanded.test.expected,
-                                },
-                                error: None,
-                            });
+        if let Test::File(test) = test {
+            let mut expanded = ExpandedTest {
+                name: bin_name(vec.len()),
+                test: Test::File(test.clone()),
+                error: None,
+            };
+            if let Some(utf8) = test.path.to_str() {
+                if utf8.contains('*') {
+                    match glob(utf8) {
+                        Ok(paths) => {
+                            for path in paths {
+                                vec.push(ExpandedTest {
+                                    name: bin_name(vec.len()),
+                                    test: Test::File(FileTest {
+                                        path,
+                                        expected: expanded.test.expected(),
+                                    }),
+                                    error: None,
+                                });
+                            }
+                            continue;
                         }
-                        continue;
+                        Err(error) => expanded.error = Some(error),
                     }
-                    Err(error) => expanded.error = Some(error),
                 }
             }
+            vec.push(expanded);
+        } else {
+            vec.push(ExpandedTest {
+                name: bin_name(vec.len()),
+                test: test.clone(),
+                error: None,
+            });
         }
-        vec.push(expanded);
     }
 
     vec
@@ -412,6 +445,6 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
     tests.retain(|t| {
         filters
             .iter()
-            .any(|f| t.test.path.to_string_lossy().contains(f))
+            .any(|f| t.test.path().to_string_lossy().contains(f))
     });
 }

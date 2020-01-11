@@ -24,6 +24,7 @@ pub enum Error {
     TomlSer(toml::ser::Error),
     UpdateVar(OsString),
     WriteStderr(io::Error),
+    FileCreation(io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -56,6 +57,7 @@ impl Display for Error {
                 var.to_string_lossy(),
             ),
             WriteStderr(e) => write!(f, "failed to write stderr file: {}", e),
+            FileCreation(e) => write!(f, "failed to create file for inline test: {}", e),
         }
     }
 }
