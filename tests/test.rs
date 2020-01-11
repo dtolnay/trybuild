@@ -29,6 +29,6 @@ fn test() {
     t.compile_fail_inline_check_sub(
         "inline_compile_fail_sub",
         "fn main() { compile_error!(\"tadam\"); }",
-        "compile_error!(\"tadam"
+        "compile_error!(\"tadam",
     );
 }

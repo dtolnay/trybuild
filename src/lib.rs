@@ -238,7 +238,6 @@ struct Test {
     inner: TestKind,
 }
 
-
 #[derive(Clone, Debug)]
 enum TestKind {
     File(FileTest),
@@ -255,10 +254,10 @@ impl Test {
 
     fn stderr_path(&self) -> PathBuf {
         match self.inner {
-            TestKind::Inline(InlineTest { ref stderr_path, .. }) => {
-                stderr_path.clone().expect("not a compile fail test")
-            }
-            TestKind::File(FileTest { ref path, ..}) => path.with_extension("stderr"),
+            TestKind::Inline(InlineTest {
+                ref stderr_path, ..
+            }) => stderr_path.clone().expect("not a compile fail test"),
+            TestKind::File(FileTest { ref path, .. }) => path.with_extension("stderr"),
         }
     }
 
@@ -341,7 +340,7 @@ impl TestCases {
     }
 
     pub fn compile_fail_check_sub<P: AsRef<Path>>(&self, path: P, sub_string: &str) {
-        self.runner.borrow_mut().tests.push(Test{
+        self.runner.borrow_mut().tests.push(Test {
             expected: Expected::CompileFailSubString(sub_string.to_owned()),
             inner: TestKind::File(FileTest {
                 path: path.as_ref().to_owned(),

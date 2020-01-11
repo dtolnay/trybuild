@@ -74,8 +74,9 @@ impl Runner {
         for e in tests {
             match e.test.expected {
                 Expected::Pass => has_pass = true,
-                Expected::CompileFailSubString(_) |
-                Expected::CompileFail => has_compile_fail = true,
+                Expected::CompileFailSubString(_) | Expected::CompileFail => {
+                    has_compile_fail = true
+                }
             }
         }
 
@@ -179,7 +180,7 @@ impl Runner {
                     path: match expanded.test.inner {
                         TestKind::File(ref t) => project.source_dir.join(&t.path),
                         TestKind::Inline(ref t) => project.dir.join(&format!("{}.rs", t.name)),
-                    }
+                    },
                 });
             }
         }
@@ -362,7 +363,8 @@ fn create_inline_test(test: &InlineTest, project: &Project) -> Result<()> {
         .write(true)
         .truncate(true)
         .create(true)
-        .open(&path).map_err(Error::FileCreation)?;
+        .open(&path)
+        .map_err(Error::FileCreation)?;
     write!(file, "{}", test.code).map_err(Error::FileCreation)
 }
 
@@ -410,9 +412,7 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                                     name: bin_name(vec.len()),
                                     test: Test {
                                         expected: expanded.test.expected.clone(),
-                                        inner: TestKind::File(FileTest {
-                                            path,
-                                        }),
+                                        inner: TestKind::File(FileTest { path }),
                                     },
                                     error: None,
                                 });
