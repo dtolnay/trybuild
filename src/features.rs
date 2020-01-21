@@ -32,16 +32,13 @@ fn try_find() -> Result<Vec<String>, Ignored> {
     // The hash at the end is ascii so not lossy, rest of conversion doesn't
     // matter.
     let test_binary_lossy = test_binary.to_string_lossy();
-    let hash = if cfg!(windows) {
-        test_binary_lossy
-            // trim ".exe" from the binary name for windows
-            .get(test_binary_lossy.len() - 21..test_binary_lossy.len() - 4)
-            .ok_or(Ignored)?
+    let hash_range = if cfg!(windows) {
+        // Trim ".exe" from the binary name for windows.
+        test_binary_lossy.len() - 21..test_binary_lossy.len() - 4
     } else {
-        test_binary_lossy
-            .get(test_binary_lossy.len() - 17..)
-            .ok_or(Ignored)?
+        test_binary_lossy.len() - 17..test_binary_lossy.len()
     };
+    let hash = test_binary_lossy.get(hash_range).ok_or(Ignored)?;
     if !hash.starts_with('-') || !hash[1..].bytes().all(is_lower_hex_digit) {
         return Err(Ignored);
     }
