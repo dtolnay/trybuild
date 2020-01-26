@@ -5,7 +5,7 @@ const RUSTFLAGS: &str = "RUSTFLAGS";
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
 pub fn make_vec() -> Vec<&'static str> {
-    let mut rustflags = Vec::new();
+    let mut rustflags = vec!["--cfg", "trybuild"];
 
     for &lint in IGNORED_LINTS {
         rustflags.push("-A");
