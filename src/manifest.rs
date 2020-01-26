@@ -52,7 +52,7 @@ pub struct Config {
 
 #[derive(Serialize, Debug)]
 pub struct Build {
-    pub rustflags: Vec<String>,
+    pub rustflags: Vec<&'static str>,
 }
 
 #[derive(Serialize, Debug)]

@@ -4,12 +4,12 @@ use std::process::Command;
 const RUSTFLAGS: &str = "RUSTFLAGS";
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
-pub fn make_vec() -> Vec<String> {
+pub fn make_vec() -> Vec<&'static str> {
     let mut rustflags = Vec::new();
 
     for &lint in IGNORED_LINTS {
-        rustflags.push("-A".to_owned());
-        rustflags.push(lint.to_owned());
+        rustflags.push("-A");
+        rustflags.push(lint);
     }
 
     rustflags
