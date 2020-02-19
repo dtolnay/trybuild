@@ -144,6 +144,12 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     term::bold_color(Red);
     println!("ACTUAL OUTPUT:");
     snippet_diff(Red, actual, diff.as_ref());
+    print!("note: If the ");
+    term::color(Red);
+    print!("actual output");
+    term::reset();
+    println!(" is the correct output you can bless it by rerunning");
+    println!("      your test with the environment variable TRYBUILD=overwrite");
     println!();
 }
 
