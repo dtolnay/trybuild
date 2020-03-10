@@ -31,6 +31,15 @@ fn cargo(project: &Project) -> Command {
 
 pub fn build_dependencies(project: &Project) -> Result<()> {
     let status = cargo(project)
+        .arg("generate-lockfile")
+        .status()
+        .map_err(Error::Cargo)?;
+
+    if !status.success() {
+        return Err(Error::CargoFail)
+    }
+
+    let status = cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
         .arg("--bin")
         .arg(&project.name)
