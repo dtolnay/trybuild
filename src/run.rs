@@ -73,7 +73,7 @@ impl Runner {
         for e in tests {
             match e.test.expected {
                 Expected::Pass => has_pass = true,
-                Expected::CompileFail => has_compile_fail = true,
+                Expected::CompileFail | Expected::CompileFailQuiet => has_compile_fail = true,
             }
         }
 
@@ -212,6 +212,7 @@ impl Test {
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
             Expected::CompileFail => Test::check_compile_fail,
+            Expected::CompileFailQuiet => Test::check_compile_fail_quiet,
         };
 
         check(self, project, name, success, stdout, stderr)
@@ -241,6 +242,26 @@ impl Test {
         }
     }
 
+    fn check_compile_fail_quiet(
+        &self,
+        _project: &Project,
+        _name: &Name,
+        success: bool,
+        build_stdout: Vec<u8>,
+        variations: Variations,
+    ) -> Result<()> {
+        let preferred = variations.preferred();
+
+        if success {
+            message::should_not_have_compiled();
+            message::fail_output(Fail, &build_stdout);
+            message::warnings(preferred);
+            return Err(Error::ShouldNotHaveCompiled);
+        }
+
+        Ok(())
+    }
+
     fn check_compile_fail(
         &self,
         project: &Project,
@@ -249,6 +270,9 @@ impl Test {
         build_stdout: Vec<u8>,
         variations: Variations,
     ) -> Result<()> {
+        // we duplicate these lines instead of deferring to `check_compile_fail_quiet`
+        // because of the signatures: build_stdout and variations are owned, not
+        // references, which would require cloning or changing the signatures
         let preferred = variations.preferred();
 
         if success {

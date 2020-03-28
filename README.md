@@ -74,6 +74,27 @@ A compile\_fail test that fails to fail to compile is also a failure.
 
 <br>
 
+## Asserting Compile-fail tests
+
+While generally it is desirable to check for particular error messages, it is
+sometimes nice to simply check whether or not a particular test file compiles
+at all, ignoring the particular error. These tests look like this:
+
+```rust
+#[test]
+fn ui() {
+    let t = trybuild::TestCases::new();
+    t.assert_compile_fail("tests/ui/*.rs");
+}
+```
+
+The test can be run with `cargo test`. It will individually compile each of the
+source files matching the glob pattern, and expect them to fail to compile.
+Unlike standard `compile_fail` tests, no `*.stderr` files are required or consulted.
+
+Dependencies listed under `[dev-dependencies]` in the project's Cargo.toml are
+accessible from within the test cases.
+
 ## Pass tests
 
 The same test harness is able to run tests that are expected to pass, too.

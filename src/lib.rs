@@ -242,6 +242,7 @@ struct Test {
 enum Expected {
     Pass,
     CompileFail,
+    CompileFailQuiet,
 }
 
 impl TestCases {
@@ -252,6 +253,7 @@ impl TestCases {
         }
     }
 
+    /// Assert that these test files compile successfully.
     pub fn pass<P: AsRef<Path>>(&self, path: P) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
@@ -259,10 +261,21 @@ impl TestCases {
         });
     }
 
+    /// Assert that these test files fail to compile, with particular error messages.
+    ///
+    /// The error messages are collected from parallel `*.stderr` files.
     pub fn compile_fail<P: AsRef<Path>>(&self, path: P) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
+        });
+    }
+
+    /// Assert that these test files fail to compile, but do not check error messages.
+    pub fn assert_compile_fail<P: AsRef<Path>>(&self, path: P) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::CompileFailQuiet,
         });
     }
 }
