@@ -108,7 +108,7 @@ impl Runner {
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
         fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
-        fs::write(path!(project.dir / "main.rs"), b"fn main() {}\n")?;
+        fs::write(path!(project.dir / "main.rs"), main_rs())?;
 
         cargo::build_dependencies(&project)?;
 
@@ -189,6 +189,18 @@ impl Runner {
             },
         }
     }
+}
+
+fn main_rs() -> &'static [u8] {
+    b"#![no_std]
+
+fn main() {}
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+"
 }
 
 impl Test {
