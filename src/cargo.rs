@@ -36,6 +36,7 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
 
     let status = cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
+        .args(features(project))
         .arg("--bin")
         .arg(&project.name)
         .status()
