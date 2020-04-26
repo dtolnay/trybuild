@@ -42,6 +42,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         StripCouldNotCompile2,
         StripForMoreInformation,
         StripForMoreInformation2,
+        DirBackslash,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -71,6 +72,7 @@ enum Normalization {
     StripCouldNotCompile2,
     StripForMoreInformation,
     StripForMoreInformation2,
+    DirBackslash,
 }
 
 use self::Normalization::*;
@@ -138,7 +140,15 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
         }
     }
 
-    let line = line
+    let mut line = line.to_owned();
+
+    if normalization >= DirBackslash {
+        // https://github.com/dtolnay/trybuild/issues/66
+        let source_dir_with_backslash = context.source_dir.to_string_lossy().into_owned() + "\\";
+        line = line.replace(&source_dir_with_backslash, "$DIR/");
+    }
+
+    line = line
         .replace(context.krate, "$CRATE")
         .replace(context.source_dir.to_string_lossy().as_ref(), "$DIR")
         .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE");
