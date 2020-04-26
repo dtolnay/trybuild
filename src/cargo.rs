@@ -30,9 +30,7 @@ fn cargo(project: &Project) -> Command {
 }
 
 pub fn build_dependencies(project: &Project) -> Result<()> {
-    let _ = cargo(project)
-        .arg("generate-lockfile")
-        .status();
+    let _ = cargo(project).arg("generate-lockfile").status();
 
     let status = cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
