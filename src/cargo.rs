@@ -58,7 +58,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .status();
 
     cargo(project)
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.has_pass && !project.check_only { "build" } else { "check" })
         .arg("--bin")
         .arg(name)
         .args(features(project))
@@ -68,9 +68,12 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
+
 pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
+
+    println!("running cargo check test");
     cargo(project)
-        .arg("run")
+        .arg(if project.check_only { "check" } else { "run"})
         .arg("--bin")
         .arg(name)
         .args(features(project))

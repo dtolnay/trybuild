@@ -230,6 +230,7 @@ pub struct TestCases {
 #[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
+    check_only: bool
 }
 
 #[derive(Clone, Debug)]
@@ -248,9 +249,16 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner { tests: Vec::new(), check_only: false }),
         }
     }
+
+    pub fn check_only() -> Self {
+        TestCases {
+            runner: RefCell::new(Runner { tests: Vec::new(), check_only: true}),
+        }
+    }
+
 
     pub fn pass<P: AsRef<Path>>(&self, path: P) {
         self.runner.borrow_mut().tests.push(Test {
