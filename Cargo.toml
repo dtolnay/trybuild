@@ -10,9 +10,6 @@ documentation = "https://docs.rs/trybuild"
 exclude = ["screenshots/*"]
 readme = "README.md"
 
-[badges]
-travis-ci = { repository = "dtolnay/trybuild" }
-
 [features]
 # Experimental: highlight the diff between the expected and actual compiler
 # output. Currently unix-only. If you test this out, please provide any feedback
