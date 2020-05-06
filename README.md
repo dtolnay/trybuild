@@ -1,7 +1,7 @@
 Trybuild
 ========
 
-[![Build Status](https://api.travis-ci.com/dtolnay/trybuild.svg?branch=master)](https://travis-ci.com/dtolnay/trybuild)
+[![Build Status](https://img.shields.io/github/workflow/status/dtolnay/trybuild/CI/master)](https://github.com/dtolnay/trybuild/actions?query=branch%3Amaster)
 [![Latest Version](https://img.shields.io/crates/v/trybuild.svg)](https://crates.io/crates/trybuild)
 [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/trybuild)
 
