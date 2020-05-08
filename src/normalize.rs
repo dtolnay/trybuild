@@ -43,6 +43,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         StripForMoreInformation,
         StripForMoreInformation2,
         DirBackslash,
+        TrimEnd,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -73,6 +74,7 @@ enum Normalization {
     StripForMoreInformation,
     StripForMoreInformation2,
     DirBackslash,
+    TrimEnd,
 }
 
 use self::Normalization::*;
@@ -146,6 +148,10 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
         // https://github.com/dtolnay/trybuild/issues/66
         let source_dir_with_backslash = context.source_dir.to_string_lossy().into_owned() + "\\";
         line = line.replace(&source_dir_with_backslash, "$DIR/");
+    }
+
+    if normalization >= TrimEnd {
+        line.truncate(line.trim_end().len());
     }
 
     line = line
