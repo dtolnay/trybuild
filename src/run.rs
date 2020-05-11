@@ -231,9 +231,34 @@ impl Test {
             return Err(Error::CargoFail);
         }
 
+        let stdout_path = self.path.with_extension("stdout");
+        let mut is_overwrite = false;
+        if stdout_path.exists() {
+            let expected = fs::read_to_string(&stdout_path)
+                .map_err(Error::ReadStderr)?
+                .replace("\r\n", "\n");
+
+            if expected.as_bytes() != build_stdout.as_slice() {
+                let stdout = String::from_utf8_lossy(&build_stdout).to_string();
+                match project.update {
+                    Update::Wip => {
+                        message::mismatch(&expected, &stdout);
+                        return Err(Error::Mismatch);
+                    }
+                    Update::Overwrite => {
+                        message::overwrite_stderr(&stdout_path, &stdout);
+                        fs::write(stdout_path, preferred).map_err(Error::WriteStderr)?;
+                        is_overwrite = true;
+                    }
+                };
+            }
+        }
+
         let mut output = cargo::run_test(project, name)?;
-        output.stdout.splice(..0, build_stdout);
-        message::output(preferred, &output);
+        if !is_overwrite {
+            output.stdout.splice(..0, build_stdout);
+            message::output(preferred, &output);
+        }
         if output.status.success() {
             Ok(())
         } else {

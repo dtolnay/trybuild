@@ -1,0 +1,13 @@
+[package]
+name = "trybuild-test-suite"
+version = "0.0.1"
+edition = "2018"
+workspace = ".."
+
+publish = false
+
+[dev-dependencies]
+trybuild = { path = ".." }
+
+[lib]
+proc-macro = true
