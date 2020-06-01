@@ -44,6 +44,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         StripForMoreInformation2,
         DirBackslash,
         TrimEnd,
+        RustLib,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -75,6 +76,7 @@ enum Normalization {
     StripForMoreInformation2,
     DirBackslash,
     TrimEnd,
+    RustLib,
 }
 
 use self::Normalization::*;
@@ -103,8 +105,16 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
     }
 
     if line.trim_start().starts_with("::: ") {
-        let line = line.replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE");
-        return Some(line.replace('\\', "/"));
+        let mut line = line
+            .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE")
+            .replace('\\', "/");
+        if normalization >= RustLib {
+            if let Some(pos) = line.find("/rustlib/src/rust/src/") {
+                // ::: $RUST/src/libstd/net/ip.rs:83:1
+                line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+            }
+        }
+        return Some(line);
     }
 
     if line.starts_with("error: aborting due to ") {
