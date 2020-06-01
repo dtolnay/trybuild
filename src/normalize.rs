@@ -106,7 +106,7 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
 
     if line.trim_start().starts_with("::: ") {
         let mut line = line
-            .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE")
+            .replace_case_insensitive(context.workspace, "$WORKSPACE")
             .replace('\\', "/");
         if normalization >= RustLib {
             if let Some(pos) = line.find("/rustlib/src/rust/src/") {
@@ -166,8 +166,49 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
 
     line = line
         .replace(context.krate, "$CRATE")
-        .replace(context.source_dir.to_string_lossy().as_ref(), "$DIR")
-        .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE");
+        .replace_case_insensitive(context.source_dir, "$DIR")
+        .replace_case_insensitive(context.workspace, "$WORKSPACE");
 
     Some(line)
+}
+
+trait ReplaceCaseInsensitive {
+    fn replace_case_insensitive(&self, from: &Path, to: &str) -> String;
+}
+
+impl ReplaceCaseInsensitive for str {
+    fn replace_case_insensitive(&self, from: &Path, to: &str) -> String {
+        let lower_self = self.to_ascii_lowercase();
+        let lower_pat = from.to_string_lossy().to_ascii_lowercase(); 
+
+        let split: Vec<_> = lower_self.split(&lower_pat).collect();
+
+        let new_len =
+            split.iter().map(|s| s.len()).sum::<usize>()
+            + (split.len() - 1) * to.len();
+
+        let mut out: String = String::with_capacity(new_len);
+
+        let mut iter = split.iter();
+        let mut idx = 0;
+
+        macro_rules! push (
+            ($next: expr) => {
+                let next_len = $next.len();
+                out.push_str(&self[idx..idx+next_len]);
+                idx += next_len;  
+            }
+        );
+
+        push!(iter.next().expect("split should always have at least one element"));
+
+        for element in iter {
+            out.push_str(to);
+            idx += lower_pat.len();
+
+            push!(element);
+        }
+
+        out
+    }
 }
