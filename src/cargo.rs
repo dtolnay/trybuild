@@ -87,7 +87,10 @@ pub fn metadata() -> Result<Metadata> {
         .output()
         .map_err(Error::Cargo)?;
 
-    serde_json::from_slice(&output.stdout).map_err(Error::Metadata)
+    serde_json::from_slice(&output.stdout).map_err(|err| {
+        print!("{}", String::from_utf8_lossy(&output.stderr));
+        Error::Metadata(err)
+    })
 }
 
 fn features(project: &Project) -> Vec<String> {
