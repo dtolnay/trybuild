@@ -45,6 +45,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         DirBackslash,
         TrimEnd,
         RustLib,
+        TypeDirBackslash,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -77,6 +78,7 @@ enum Normalization {
     DirBackslash,
     TrimEnd,
     RustLib,
+    TypeDirBackslash,
 }
 
 use self::Normalization::*;
@@ -162,6 +164,15 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
 
     if normalization >= TrimEnd {
         line.truncate(line.trim_end().len());
+    }
+
+    if normalization >= TypeDirBackslash {
+        if line
+            .trim_start()
+            .starts_with("= note: required because it appears within the type")
+        {
+            line = line.replace('\\', "/");
+        }
     }
 
     line = line
