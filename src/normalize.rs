@@ -43,9 +43,9 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         StripForMoreInformation,
         StripForMoreInformation2,
         DirBackslash,
-        TypeDirBackslash,
         TrimEnd,
         RustLib,
+        TypeDirBackslash,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -76,9 +76,9 @@ enum Normalization {
     StripForMoreInformation,
     StripForMoreInformation2,
     DirBackslash,
-    TypeDirBackslash,
     TrimEnd,
     RustLib,
+    TypeDirBackslash,
 }
 
 use self::Normalization::*;
@@ -162,6 +162,10 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
         line = line.replace(&source_dir_with_backslash, "$DIR/");
     }
 
+    if normalization >= TrimEnd {
+        line.truncate(line.trim_end().len());
+    }
+
     if normalization >= TypeDirBackslash {
         if line
             .trim_start()
@@ -169,10 +173,6 @@ fn filter(line: &str, normalization: Normalization, context: Context) -> Option<
         {
             line = line.replace('\\', "/");
         }
-    }
-
-    if normalization >= TrimEnd {
-        line.truncate(line.trim_end().len());
     }
 
     line = line
