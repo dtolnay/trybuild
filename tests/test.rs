@@ -1,5 +1,6 @@
 #[test]
 fn test() {
+    std::env::set_var("TRYBUILD_DO_NOT_PANIC", "true");
     let t = trybuild::TestCases::new();
     t.pass("tests/ui/run-pass-0.rs");
     t.pass("tests/ui/print-stdout.rs");

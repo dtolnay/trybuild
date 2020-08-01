@@ -56,8 +56,10 @@ impl Runner {
 
         print!("\n\n");
 
-        if failures > 0 && project.name != "trybuild-tests" {
-            panic!("{} of {} tests failed", failures, len);
+        if failures > 0 {
+            if std::env::var("TRYBUILD_DO_NOT_PANIC") != Ok(String::from("true")) {
+                panic!("{} of {} tests failed", failures, len);
+            }
         }
     }
 
@@ -233,9 +235,26 @@ impl Test {
 
         let mut output = cargo::run_test(project, name)?;
         output.stdout.splice(..0, build_stdout);
-        message::output(preferred, &output);
         if output.status.success() {
-            Ok(())
+            let stderr_path = self.path.with_extension("stderr");
+
+            if !stderr_path.exists() && preferred.is_empty() {
+                println!();
+                Ok(())
+            } else {
+                let expected = if stderr_path.exists() {
+                    fs::read_to_string(&stderr_path)
+                        .map_err(Error::ReadStderr)?
+                        .replace("\r\n", "\n")
+                } else { String::new() };
+
+                let verify_result = self.verify_stderr(project, &stderr_path, preferred, &expected, &variations);
+                if verify_result.is_err() && !stderr_path.exists() {
+                    self.write_stderr_path(project, &stderr_path, preferred)?;
+                }
+                verify_result
+
+            }
         } else {
             Err(Error::RunFailed)
         }
@@ -261,24 +280,7 @@ impl Test {
         let stderr_path = self.path.with_extension("stderr");
 
         if !stderr_path.exists() {
-            match project.update {
-                Update::Wip => {
-                    let wip_dir = Path::new("wip");
-                    fs::create_dir_all(wip_dir)?;
-                    let gitignore_path = wip_dir.join(".gitignore");
-                    fs::write(gitignore_path, "*\n")?;
-                    let stderr_name = stderr_path
-                        .file_name()
-                        .unwrap_or_else(|| OsStr::new("test.stderr"));
-                    let wip_path = wip_dir.join(stderr_name);
-                    message::write_stderr_wip(&wip_path, &stderr_path, preferred);
-                    fs::write(wip_path, preferred).map_err(Error::WriteStderr)?;
-                }
-                Update::Overwrite => {
-                    message::overwrite_stderr(&stderr_path, preferred);
-                    fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
-                }
-            }
+            self.write_stderr_path(project, &stderr_path, preferred)?;
             message::fail_output(Warn, &build_stdout);
             return Ok(());
         }
@@ -287,6 +289,31 @@ impl Test {
             .map_err(Error::ReadStderr)?
             .replace("\r\n", "\n");
 
+        self.verify_stderr(project, &stderr_path, preferred, &expected, &variations)
+    }
+
+    fn write_stderr_path(&self, project: &Project, stderr_path: &Path, preferred: &str) -> Result<()> {
+        match project.update {
+            Update::Wip => {
+                let wip_dir = Path::new("wip");
+                fs::create_dir_all(wip_dir)?;
+                let gitignore_path = wip_dir.join(".gitignore");
+                fs::write(gitignore_path, "*\n")?;
+                let stderr_name = stderr_path
+                    .file_name()
+                    .unwrap_or_else(|| OsStr::new("test.stderr"));
+                let wip_path = wip_dir.join(stderr_name);
+                message::write_stderr_wip(&wip_path, &stderr_path, preferred);
+                fs::write(wip_path, preferred).map_err(Error::WriteStderr)
+            }
+            Update::Overwrite => {
+                message::overwrite_stderr(&stderr_path, preferred);
+                fs::write(stderr_path, preferred).map_err(Error::WriteStderr)
+            }
+        }
+    }
+
+    fn verify_stderr(&self, project: &Project, stderr_path: &Path, preferred: &str, expected: &str, variations: &Variations) -> Result<()> {
         if variations.any(|stderr| expected == stderr) {
             message::ok();
             return Ok(());

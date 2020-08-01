@@ -283,3 +283,23 @@ impl Drop for TestCases {
         }
     }
 }
+
+
+#[cfg(test)]
+mod unit_test {
+    use crate::TestCases;
+    use std::panic::catch_unwind;
+
+    #[test]
+    fn passing_test_wrong_stderr_fails() {
+        std::env::set_var("TRYBUILD_DO_NOT_PANIC", "false");
+        let result = catch_unwind(|| {
+            let t = TestCases::new();
+            t.pass("tests/ui/print-stderr-no-stderr-file.rs")
+        });
+        // Ideally this would be a richer assert on the actual output of the test run,
+        // but everything is very hard-coded to print straight to stderr so that's tricky without
+        // significant refactoring.
+        assert!(result.is_err());
+    }
+}

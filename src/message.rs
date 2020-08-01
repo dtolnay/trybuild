@@ -8,7 +8,6 @@ use crate::term;
 
 use std::env;
 use std::path::Path;
-use std::process::Output;
 
 pub(crate) enum Level {
     Fail,
@@ -151,44 +150,6 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!(" is the correct output you can bless it by rerunning");
     println!("      your test with the environment variable TRYBUILD=overwrite");
     println!();
-}
-
-pub(crate) fn output(warnings: &str, output: &Output) {
-    let success = output.status.success();
-    let stdout = normalize::trim(&output.stdout);
-    let stderr = normalize::trim(&output.stderr);
-    let has_output = !stdout.is_empty() || !stderr.is_empty();
-
-    if success {
-        ok();
-        if has_output || !warnings.is_empty() {
-            println!();
-        }
-    } else {
-        term::bold_color(Red);
-        println!("error");
-        term::color(Red);
-        if has_output {
-            println!("Test case failed at runtime.");
-        } else {
-            println!("Execution of the test case was unsuccessful but there was no output.");
-        }
-        term::reset();
-        println!();
-    }
-
-    self::warnings(warnings);
-
-    let color = if success { Yellow } else { Red };
-
-    for (name, content) in &[("STDOUT", stdout), ("STDERR", stderr)] {
-        if !content.is_empty() {
-            term::bold_color(color);
-            println!("{}:", name);
-            snippet(color, &normalize::trim(content));
-            println!();
-        }
-    }
 }
 
 pub(crate) fn fail_output(level: Level, stdout: &[u8]) {
