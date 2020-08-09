@@ -65,9 +65,9 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
 6  |     let _ = quote! { #(#ip)* };
    |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
    |
-  ::: $RUST/src/libstd/net/ip.rs:83:1
+  ::: $RUST/src/libstd/net/ip.rs
    |
-83 | pub struct Ipv4Addr {
+   | pub struct Ipv4Addr {
    | -------------------
    | |
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
