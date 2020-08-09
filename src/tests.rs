@@ -36,3 +36,11 @@ error: `self` parameter is only allowed in associated functions
 11 | async fn bad_endpoint(self) -> Result<HttpResponseOkObject<()>, HttpError> {
    |                       ^^^^ not semantically valid as function parameter
 "}
+
+test_normalize! {test_dir_backslash "
+error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not satisfied
+   --> \\git\\trybuild\\test_suite\\ui\\error.rs:22:61
+" "
+error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not satisfied
+   --> $DIR/error.rs:22:61
+"}
