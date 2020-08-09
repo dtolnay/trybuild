@@ -50,6 +50,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         TrimEnd,
         RustLib,
         TypeDirBackslash,
+        WorkspaceLines,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -83,6 +84,7 @@ enum Normalization {
     TrimEnd,
     RustLib,
     TypeDirBackslash,
+    WorkspaceLines,
 }
 
 use self::Normalization::*;
@@ -95,6 +97,7 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
         all_lines: &lines,
         normalization,
         context,
+        hide_numbers: 0,
     };
     for i in 0..lines.len() {
         if let Some(line) = filter.apply(i) {
@@ -112,11 +115,17 @@ struct Filter<'a> {
     all_lines: &'a [&'a str],
     normalization: Normalization,
     context: Context<'a>,
+    hide_numbers: usize,
 }
 
 impl<'a> Filter<'a> {
     fn apply(&mut self, index: usize) -> Option<String> {
-        let line = self.all_lines[index];
+        let mut line = self.all_lines[index].to_owned();
+
+        if self.hide_numbers > 0 {
+            hide_leading_numbers(&mut line);
+            self.hide_numbers -= 1;
+        }
 
         if line.trim_start().starts_with("--> ") {
             if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
@@ -126,16 +135,34 @@ impl<'a> Filter<'a> {
         }
 
         if line.trim_start().starts_with("::: ") {
-            let mut line = line
-                .replace(
-                    self.context.workspace.to_string_lossy().as_ref(),
-                    "$WORKSPACE",
-                )
-                .replace('\\', "/");
+            let mut other_crate = false;
+            let workspace_pat = self.context.workspace.to_string_lossy();
+            if let Some(i) = line.find(workspace_pat.as_ref()) {
+                line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
+                other_crate = true;
+            }
+            let mut line = line.replace('\\', "/");
             if self.normalization >= RustLib {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+                    other_crate = true;
+                }
+            }
+            if other_crate && self.normalization >= WorkspaceLines {
+                // Blank out line numbers for this particular error since rustc
+                // tends to reach into code from outside of the test case. The
+                // test stderr shouldn't need to be updated every time we touch
+                // those files.
+                hide_trailing_numbers(&mut line);
+                self.hide_numbers = 2;
+                for (fwd, next_line) in self.all_lines[index + 1..].iter().take(6).enumerate() {
+                    if next_line.trim_start().is_empty()
+                        || next_line.contains(" required by this bound in `")
+                    {
+                        self.hide_numbers = fwd;
+                        break;
+                    }
                 }
             }
             return Some(line);
@@ -176,8 +203,6 @@ impl<'a> Filter<'a> {
             }
         }
 
-        let mut line = line.to_owned();
-
         if self.normalization >= DirBackslash {
             // https://github.com/dtolnay/trybuild/issues/66
             let source_dir_with_backslash =
@@ -207,5 +232,24 @@ impl<'a> Filter<'a> {
             );
 
         Some(line)
+    }
+}
+
+// "10 | T: Send,"  ->  "   | T: Send,"
+fn hide_leading_numbers(line: &mut String) {
+    let n = line.bytes().take_while(u8::is_ascii_digit).count();
+    for i in 0..n {
+        line.replace_range(i..i + 1, " ");
+    }
+}
+
+// "main.rs:22:29"  ->  "main.rs"
+fn hide_trailing_numbers(line: &mut String) {
+    for _ in 0..2 {
+        let digits = line.bytes().rev().take_while(u8::is_ascii_digit).count();
+        if digits == 0 || !line[..line.len() - digits].ends_with(':') {
+            return;
+        }
+        line.truncate(line.len() - digits - 1);
     }
 }
