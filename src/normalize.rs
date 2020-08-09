@@ -135,19 +135,21 @@ impl<'a> Filter<'a> {
         }
 
         if line.trim_start().starts_with("::: ") {
-            let mut line = line
-                .replace(
-                    self.context.workspace.to_string_lossy().as_ref(),
-                    "$WORKSPACE",
-                )
-                .replace('\\', "/");
+            let mut other_crate = false;
+            let workspace_pat = self.context.workspace.to_string_lossy();
+            if let Some(i) = line.find(workspace_pat.as_ref()) {
+                line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
+                other_crate = true;
+            }
+            let mut line = line.replace('\\', "/");
             if self.normalization >= RustLib {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+                    other_crate = true;
                 }
             }
-            if self.normalization >= WorkspaceLines {
+            if other_crate && self.normalization >= WorkspaceLines {
                 // Blank out line numbers for this particular error since rustc
                 // tends to reach into code from outside of the test case. The
                 // test stderr shouldn't need to be updated every time we touch
