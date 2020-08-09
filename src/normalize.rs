@@ -91,8 +91,13 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
     let mut normalized = String::new();
 
     let lines: Vec<&str> = original.lines().collect();
+    let mut filter = Filter {
+        all_lines: &lines,
+        normalization,
+        context,
+    };
     for i in 0..lines.len() {
-        if let Some(line) = filter(&lines, i, normalization, context) {
+        if let Some(line) = filter.apply(i) {
             normalized += &line;
             if !normalized.ends_with("\n\n") {
                 normalized.push('\n');
@@ -103,94 +108,104 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
     trim(normalized)
 }
 
-fn filter(
-    all_lines: &[&str],
-    index: usize,
+struct Filter<'a> {
+    all_lines: &'a [&'a str],
     normalization: Normalization,
-    context: Context,
-) -> Option<String> {
-    let line = all_lines[index];
+    context: Context<'a>,
+}
 
-    if line.trim_start().starts_with("--> ") {
-        if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
-            let cut_start = line.find('>').unwrap() + 2;
-            return Some(line[..cut_start].to_owned() + "$DIR/" + &line[cut_end + 1..]);
-        }
-    }
+impl<'a> Filter<'a> {
+    fn apply(&mut self, index: usize) -> Option<String> {
+        let line = self.all_lines[index];
 
-    if line.trim_start().starts_with("::: ") {
-        let mut line = line
-            .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE")
-            .replace('\\', "/");
-        if normalization >= RustLib {
-            if let Some(pos) = line.find("/rustlib/src/rust/src/") {
-                // ::: $RUST/src/libstd/net/ip.rs:83:1
-                line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+        if line.trim_start().starts_with("--> ") {
+            if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
+                let cut_start = line.find('>').unwrap() + 2;
+                return Some(line[..cut_start].to_owned() + "$DIR/" + &line[cut_end + 1..]);
             }
         }
-        return Some(line);
-    }
 
-    if line.starts_with("error: aborting due to ") {
-        return None;
-    }
+        if line.trim_start().starts_with("::: ") {
+            let mut line = line
+                .replace(
+                    self.context.workspace.to_string_lossy().as_ref(),
+                    "$WORKSPACE",
+                )
+                .replace('\\', "/");
+            if self.normalization >= RustLib {
+                if let Some(pos) = line.find("/rustlib/src/rust/src/") {
+                    // ::: $RUST/src/libstd/net/ip.rs:83:1
+                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+                }
+            }
+            return Some(line);
+        }
 
-    if line == "To learn more, run the command again with --verbose." {
-        return None;
-    }
-
-    if normalization >= StripCouldNotCompile {
-        if line.starts_with("error: Could not compile `") {
+        if line.starts_with("error: aborting due to ") {
             return None;
         }
-    }
 
-    if normalization >= StripCouldNotCompile2 {
-        if line.starts_with("error: could not compile `") {
+        if line == "To learn more, run the command again with --verbose." {
             return None;
         }
-    }
 
-    if normalization >= StripForMoreInformation {
-        if line.starts_with("For more information about this error, try `rustc --explain") {
-            return None;
+        if self.normalization >= StripCouldNotCompile {
+            if line.starts_with("error: Could not compile `") {
+                return None;
+            }
         }
-    }
 
-    if normalization >= StripForMoreInformation2 {
-        if line.starts_with("Some errors have detailed explanations:") {
-            return None;
+        if self.normalization >= StripCouldNotCompile2 {
+            if line.starts_with("error: could not compile `") {
+                return None;
+            }
         }
-        if line.starts_with("For more information about an error, try `rustc --explain") {
-            return None;
+
+        if self.normalization >= StripForMoreInformation {
+            if line.starts_with("For more information about this error, try `rustc --explain") {
+                return None;
+            }
         }
-    }
 
-    let mut line = line.to_owned();
-
-    if normalization >= DirBackslash {
-        // https://github.com/dtolnay/trybuild/issues/66
-        let source_dir_with_backslash = context.source_dir.to_string_lossy().into_owned() + "\\";
-        line = line.replace(&source_dir_with_backslash, "$DIR/");
-    }
-
-    if normalization >= TrimEnd {
-        line.truncate(line.trim_end().len());
-    }
-
-    if normalization >= TypeDirBackslash {
-        if line
-            .trim_start()
-            .starts_with("= note: required because it appears within the type")
-        {
-            line = line.replace('\\', "/");
+        if self.normalization >= StripForMoreInformation2 {
+            if line.starts_with("Some errors have detailed explanations:") {
+                return None;
+            }
+            if line.starts_with("For more information about an error, try `rustc --explain") {
+                return None;
+            }
         }
+
+        let mut line = line.to_owned();
+
+        if self.normalization >= DirBackslash {
+            // https://github.com/dtolnay/trybuild/issues/66
+            let source_dir_with_backslash =
+                self.context.source_dir.to_string_lossy().into_owned() + "\\";
+            line = line.replace(&source_dir_with_backslash, "$DIR/");
+        }
+
+        if self.normalization >= TrimEnd {
+            line.truncate(line.trim_end().len());
+        }
+
+        if self.normalization >= TypeDirBackslash {
+            if line
+                .trim_start()
+                .starts_with("= note: required because it appears within the type")
+            {
+                line = line.replace('\\', "/");
+            }
+        }
+
+        line = line
+            .replace(self.context.krate, "$CRATE")
+            .replace(self.context.source_dir.to_string_lossy().as_ref(), "$DIR")
+            .replace(
+                self.context.workspace.to_string_lossy().as_ref(),
+                "$WORKSPACE",
+            );
+
+        Some(line)
     }
-
-    line = line
-        .replace(context.krate, "$CRATE")
-        .replace(context.source_dir.to_string_lossy().as_ref(), "$DIR")
-        .replace(context.workspace.to_string_lossy().as_ref(), "$WORKSPACE");
-
-    Some(line)
 }
