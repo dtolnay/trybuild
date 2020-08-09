@@ -44,3 +44,31 @@ error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not 
 error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not satisfied
    --> $DIR/error.rs:22:61
 "}
+
+test_normalize! {test_rust_lib "
+error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
+  --> /git/trybuild/test_suite/ui/not-repeatable.rs:6:13
+   |
+6  |     let _ = quote! { #(#ip)* };
+   |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
+   |
+  ::: /rustlib/src/rust/src/libstd/net/ip.rs:83:1
+   |
+83 | pub struct Ipv4Addr {
+   | -------------------
+   | |
+   | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
+" "
+error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
+  --> $DIR/not-repeatable.rs:6:13
+   |
+6  |     let _ = quote! { #(#ip)* };
+   |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
+   |
+  ::: $RUST/src/libstd/net/ip.rs:83:1
+   |
+83 | pub struct Ipv4Addr {
+   | -------------------
+   | |
+   | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
+"}
