@@ -90,8 +90,9 @@ use self::Normalization::*;
 fn apply(original: &str, normalization: Normalization, context: Context) -> String {
     let mut normalized = String::new();
 
-    for line in original.lines() {
-        if let Some(line) = filter(line, normalization, context) {
+    let lines: Vec<&str> = original.lines().collect();
+    for i in 0..lines.len() {
+        if let Some(line) = filter(&lines, i, normalization, context) {
             normalized += &line;
             if !normalized.ends_with("\n\n") {
                 normalized.push('\n');
@@ -102,7 +103,14 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
     trim(normalized)
 }
 
-fn filter(line: &str, normalization: Normalization, context: Context) -> Option<String> {
+fn filter(
+    all_lines: &[&str],
+    index: usize,
+    normalization: Normalization,
+    context: Context,
+) -> Option<String> {
+    let line = all_lines[index];
+
     if line.trim_start().starts_with("--> ") {
         if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
             let cut_start = line.find('>').unwrap() + 2;
