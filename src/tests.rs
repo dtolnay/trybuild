@@ -5,7 +5,7 @@ macro_rules! test_normalize {
         #[test]
         fn $name() {
             let context = super::Context {
-                krate: "trybuild",
+                krate: "trybuild000",
                 source_dir: Path::new("/git/trybuild/test_suite"),
                 workspace: Path::new("/git/trybuild"),
             };
@@ -71,4 +71,26 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
    | -------------------
    | |
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
+"}
+
+test_normalize! {test_type_dir_backslash "
+error[E0277]: `*mut _` cannot be shared between threads safely
+   --> /git/trybuild/test_suite/ui/compile-fail-3.rs:7:5
+    |
+7   |     thread::spawn(|| {
+    |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
+    |
+    = help: the trait `std::marker::Sync` is not implemented for `*mut _`
+    = note: required because of the requirements on the impl of `std::marker::Send` for `&*mut _`
+    = note: required because it appears within the type `[closure@/git/trybuild/test_suite/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
+" "
+error[E0277]: `*mut _` cannot be shared between threads safely
+   --> $DIR/compile-fail-3.rs:7:5
+    |
+7   |     thread::spawn(|| {
+    |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
+    |
+    = help: the trait `std::marker::Sync` is not implemented for `*mut _`
+    = note: required because of the requirements on the impl of `std::marker::Send` for `&*mut _`
+    = note: required because it appears within the type `[closure@$DIR/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
 "}
