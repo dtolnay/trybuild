@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
+
 use std::path::Path;
 
 #[derive(Copy, Clone)]
