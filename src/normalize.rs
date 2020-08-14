@@ -85,6 +85,8 @@ enum Normalization {
     RustLib,
     TypeDirBackslash,
     WorkspaceLines,
+    // New normalization steps are to be inserted here at the end so that any
+    // snapshots saved before your normalization change remain passing.
 }
 
 use self::Normalization::*;
