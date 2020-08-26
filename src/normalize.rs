@@ -149,6 +149,10 @@ impl<'a> Filter<'a> {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
                     other_crate = true;
+                } else if let Some(pos) = line.find("/rustlib/src/rust/library/") {
+                    // ::: $RUST/std/src/net/ip.rs:83:1
+                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 25, "$RUST");
+                    other_crate = true;
                 }
             }
             if other_crate && self.normalization >= WorkspaceLines {
