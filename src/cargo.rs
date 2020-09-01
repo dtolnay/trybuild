@@ -83,6 +83,7 @@ pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
 pub fn metadata() -> Result<Metadata> {
     let output = raw_cargo()
         .arg("metadata")
+        .arg("--no-deps")
         .arg("--format-version=1")
         .output()
         .map_err(Error::Cargo)?;
