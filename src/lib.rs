@@ -227,6 +227,7 @@ mod run;
 mod rustflags;
 
 use std::cell::RefCell;
+use std::panic::RefUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::thread;
 
@@ -274,6 +275,8 @@ impl TestCases {
         });
     }
 }
+
+impl RefUnwindSafe for TestCases {}
 
 #[doc(hidden)]
 impl Drop for TestCases {
