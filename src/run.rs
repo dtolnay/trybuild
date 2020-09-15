@@ -2,6 +2,7 @@ use std::collections::BTreeMap as Map;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
+use std::mem;
 use std::path::{Path, PathBuf};
 
 use super::{Expected, Runner, Test};
@@ -142,6 +143,7 @@ impl Runner {
             },
             features,
             dependencies: Map::new(),
+            target: source_manifest.target,
             bins: Vec::new(),
             workspace: Some(Workspace {}),
             // Within a workspace, only the [patch] and [replace] sections in
@@ -154,6 +156,10 @@ impl Runner {
         manifest
             .dependencies
             .extend(source_manifest.dev_dependencies);
+        for target in manifest.target.values_mut() {
+            let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
+            target.dependencies.extend(dev_dependencies);
+        }
         manifest.dependencies.insert(
             crate_name,
             Dependency {
