@@ -21,6 +21,10 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
 
     fix_dependencies(&mut manifest.dependencies, manifest_dir);
     fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);
+    for target in manifest.target.values_mut() {
+        fix_dependencies(&mut target.dependencies, manifest_dir);
+        fix_dependencies(&mut target.dev_dependencies, manifest_dir);
+    }
 
     Ok(manifest)
 }
@@ -81,6 +85,8 @@ pub struct Manifest {
     pub dependencies: Map<String, Dependency>,
     #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: Map<String, Dependency>,
+    #[serde(default)]
+    pub target: Map<String, TargetDependencies>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -106,6 +112,18 @@ pub struct Dependency {
     pub features: Vec<String>,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TargetDependencies {
+    #[serde(default, skip_serializing_if = "Map::is_empty")]
+    pub dependencies: Map<String, Dependency>,
+    #[serde(
+        default,
+        alias = "dev-dependencies",
+        skip_serializing_if = "Map::is_empty"
+    )]
+    pub dev_dependencies: Map<String, Dependency>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
