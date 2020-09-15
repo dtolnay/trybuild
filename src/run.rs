@@ -398,6 +398,7 @@ impl ExpandedTest {
 // Cargo to run the test at all. The next argument starting with `trybuild=`
 // provides a filename filter. Only test cases whose filename contains the
 // filter string will be run.
+#[allow(clippy::needless_collect)] // false positive https://github.com/rust-lang/rust-clippy/issues/5991
 fn filter(tests: &mut Vec<ExpandedTest>) {
     let filters = env::args_os()
         .flat_map(OsString::into_string)
