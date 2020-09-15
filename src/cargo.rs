@@ -34,6 +34,7 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
 
     let status = cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
+        .args(target())
         .arg("--bin")
         .arg(&project.name)
         .args(features(project))
@@ -59,6 +60,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
 
     cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
+        .args(target())
         .arg("--bin")
         .arg(name)
         .args(features(project))
@@ -71,6 +73,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
 pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
     cargo(project)
         .arg("run")
+        .args(target())
         .arg("--bin")
         .arg(name)
         .args(features(project))
@@ -101,6 +104,13 @@ fn features(project: &Project) -> Vec<String> {
             "--features".to_owned(),
             features.join(","),
         ],
+        None => vec![],
+    }
+}
+
+fn target() -> Vec<&'static str> {
+    match crate::TARGET {
+        Some(target) => vec!["--target", target],
         None => vec![],
     }
 }
