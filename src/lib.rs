@@ -208,6 +208,13 @@
 //! makes error messages that we care about substantially worse, it is also
 //! important to catch and report as a compiler issue.
 
+#![allow(
+    clippy::collapsible_if,
+    clippy::match_like_matches_macro,
+    clippy::needless_collect,
+    clippy::unused_io_amount
+)]
+
 #[macro_use]
 mod term;
 
