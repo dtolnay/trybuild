@@ -86,12 +86,12 @@ impl Write for Term {
             }
             match buf.iter().position(|byte| *byte == b'\n') {
                 Some(line_len) => {
-                    self.stream.write(&buf[..line_len + 1])?;
+                    self.stream.write_all(&buf[..line_len + 1])?;
                     self.start_of_line = true;
                     buf = &buf[line_len + 1..];
                 }
                 None => {
-                    self.stream.write(buf)?;
+                    self.stream.write_all(buf)?;
                     self.start_of_line = false;
                     break;
                 }

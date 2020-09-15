@@ -211,8 +211,7 @@
 #![allow(
     clippy::collapsible_if,
     clippy::match_like_matches_macro,
-    clippy::needless_collect,
-    clippy::unused_io_amount
+    clippy::needless_collect
 )]
 
 #[macro_use]
