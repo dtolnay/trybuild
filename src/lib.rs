@@ -226,6 +226,8 @@ mod normalize;
 mod run;
 mod rustflags;
 
+include!(concat!(env!("OUT_DIR"), "/target.rs"));
+
 use std::cell::RefCell;
 use std::panic::RefUnwindSafe;
 use std::path::{Path, PathBuf};
