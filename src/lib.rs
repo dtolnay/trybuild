@@ -243,6 +243,7 @@ pub struct TestCases {
 #[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
+    files: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -261,7 +262,10 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner {
+                tests: Vec::new(),
+                files: Vec::new(),
+            }),
         }
     }
 
@@ -277,6 +281,13 @@ impl TestCases {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
         });
+    }
+
+    pub fn extra<P: AsRef<Path>>(&self, path: P) {
+        self.runner
+            .borrow_mut()
+            .files
+            .push(path.as_ref().to_owned());
     }
 }
 

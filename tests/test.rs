@@ -1,6 +1,7 @@
 #[test]
 fn test() {
     let t = trybuild::TestCases::new();
+    t.extra("tests/res/content.txt");
     t.pass("tests/ui/run-pass-0.rs");
     t.pass("tests/ui/print-stdout.rs");
     t.pass("tests/ui/run-pass-1.rs");
@@ -12,6 +13,7 @@ fn test() {
     t.pass("tests/ui/run-pass-5.rs");
     t.pass("tests/ui/compile-fail-0.rs");
     t.pass("tests/ui/run-pass-6.rs");
+    t.pass("tests/ui/read-file.rs");
     t.pass("tests/ui/run-pass-7.rs");
     t.pass("tests/ui/run-pass-8.rs");
     t.compile_fail("tests/ui/compile-fail-1.rs");

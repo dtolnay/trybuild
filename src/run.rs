@@ -3,6 +3,7 @@ use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
+use std::os;
 use std::path::{Path, PathBuf};
 
 use super::{Expected, Runner, Test};
@@ -31,10 +32,10 @@ pub struct Project {
 
 impl Runner {
     pub fn run(&mut self) {
-        let mut tests = expand_globs(&self.tests);
+        let (mut tests, files) = expand_globs(&self.tests, &self.files);
         filter(&mut tests);
 
-        let project = self.prepare(&tests).unwrap_or_else(|err| {
+        let project = self.prepare(&tests, &files).unwrap_or_else(|err| {
             message::prepare_fail(err);
             panic!("tests failed");
         });
@@ -62,7 +63,7 @@ impl Runner {
         }
     }
 
-    fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
+    fn prepare(&self, tests: &[ExpandedTest], files: &[PathBuf]) -> Result<Project> {
         let metadata = cargo::metadata()?;
         let target_dir = metadata.target_directory;
         let workspace = metadata.workspace_root;
@@ -95,6 +96,21 @@ impl Runner {
             features,
             workspace,
         };
+
+        for f in files {
+            let target = path!(project.dir / f);
+            println!("{:?}", target);
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+                if target.exists() {
+                    fs::remove_file(&target)?;
+                }
+                #[cfg(windows)]
+                os::windows::fs::symlink_file(path!(project.source_dir / f), &target)?;
+                #[cfg(unix)]
+                os::unix::fs::symlink(path!(project.source_dir / f), &target)?;
+            }
+        }
 
         let manifest = self.make_manifest(crate_name, &project, tests)?;
         let manifest_toml = toml::to_string(&manifest)?;
@@ -329,7 +345,7 @@ struct ExpandedTest {
     error: Option<Error>,
 }
 
-fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
+fn expand_globs(tests: &[Test], files: &[PathBuf]) -> (Vec<ExpandedTest>, Vec<PathBuf>) {
     fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
         let mut paths = glob::glob(pattern)?
             .map(|entry| entry.map_err(Error::from))
@@ -342,11 +358,11 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
         Name(format!("trybuild{:03}", i))
     }
 
-    let mut vec = Vec::new();
+    let mut expanded_tests = Vec::new();
 
     for test in tests {
         let mut expanded = ExpandedTest {
-            name: bin_name(vec.len()),
+            name: bin_name(expanded_tests.len()),
             test: test.clone(),
             error: None,
         };
@@ -355,8 +371,8 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                 match glob(utf8) {
                     Ok(paths) => {
                         for path in paths {
-                            vec.push(ExpandedTest {
-                                name: bin_name(vec.len()),
+                            expanded_tests.push(ExpandedTest {
+                                name: bin_name(expanded_tests.len()),
                                 test: Test {
                                     path,
                                     expected: expanded.test.expected,
@@ -370,10 +386,27 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                 }
             }
         }
-        vec.push(expanded);
+        expanded_tests.push(expanded);
     }
 
-    vec
+    let mut expanded_files = Vec::new();
+
+    for file in files {
+        if let Some(utf8) = file.to_str() {
+            if utf8.contains('*') {
+                match glob(utf8) {
+                    Ok(paths) => {
+                        expanded_files.extend(paths.into_iter());
+                        continue;
+                    }
+                    Err(_) => {} // what can be done here?
+                }
+            }
+        }
+        expanded_files.push(file.clone());
+    }
+
+    (expanded_tests, expanded_files)
 }
 
 impl ExpandedTest {
