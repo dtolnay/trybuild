@@ -111,6 +111,20 @@ impl Runner {
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
         fs::write(path!(project.dir / "main.rs"), b"fn main() {}\n")?;
 
+        let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
+
+        if workspace_cargo_lock.exists() {
+            fs::copy(
+                workspace_cargo_lock,
+                path!(project.dir / "Cargo.lock"),
+            )?;
+        } else {
+            message::warnings(&format!(
+                "Could not find `Cargo.lock` in workspace, searched at `{}`",
+                workspace_cargo_lock.display(),
+            ));
+        }
+
         cargo::build_dependencies(&project)?;
 
         Ok(project)
