@@ -96,7 +96,7 @@ impl Runner {
             workspace,
         };
 
-        let manifest = self.make_manifest(crate_name, &project, tests)?;
+        let manifest = self.make_manifest(crate_name, &project, tests);
         let manifest_toml = toml::to_string(&manifest)?;
 
         let config = self.make_config();
@@ -121,7 +121,7 @@ impl Runner {
         crate_name: String,
         project: &Project,
         tests: &[ExpandedTest],
-    ) -> Result<Manifest> {
+    ) -> Manifest {
         let source_manifest = dependencies::get_manifest(&project.source_dir);
         let workspace_manifest = dependencies::get_workspace_manifest(&project.workspace);
 
@@ -185,7 +185,7 @@ impl Runner {
             }
         }
 
-        Ok(manifest)
+        manifest
     }
 
     fn make_config(&self) -> Config {
