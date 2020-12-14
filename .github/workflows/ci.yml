@@ -36,6 +36,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo test
 
+  msrv:
+    name: Rust 1.31.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@1.31.0
+      - run: cargo check
+
   minimal:
     name: Minimal versions
     runs-on: ubuntu-latest
