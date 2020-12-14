@@ -208,7 +208,11 @@
 //! makes error messages that we care about substantially worse, it is also
 //! important to catch and report as a compiler issue.
 
-#![allow(clippy::collapsible_if, clippy::match_like_matches_macro)]
+#![allow(
+    clippy::collapsible_if,
+    clippy::manual_range_contains,
+    clippy::match_like_matches_macro
+)]
 
 #[macro_use]
 mod term;
