@@ -51,7 +51,6 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         RustLib,
         TypeDirBackslash,
         WorkspaceLines,
-        CaseInsensitivePathReplace,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -86,7 +85,6 @@ enum Normalization {
     RustLib,
     TypeDirBackslash,
     WorkspaceLines,
-    CaseInsensitivePathReplace,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -140,17 +138,15 @@ impl<'a> Filter<'a> {
 
         if line.trim_start().starts_with("::: ") {
             let mut other_crate = false;
-            let workspace_pat = self.context.workspace.to_string_lossy();
-            if let Some(i) = line.find(workspace_pat.as_ref()) {
+            let line_lower = line.to_ascii_lowercase();
+            let workspace_pat = self
+                .context
+                .workspace
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            if let Some(i) = line_lower.find(&workspace_pat) {
                 line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
                 other_crate = true;
-            } else if self.normalization >= CaseInsensitivePathReplace {
-                let line_lower = line.to_ascii_lowercase();
-                let workspace_pat_lower = workspace_pat.to_ascii_lowercase();
-                if let Some(i) = line_lower.find(&workspace_pat_lower) {
-                    line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
-                    other_crate = true;
-                }
             }
             let mut line = line.replace('\\', "/");
             if self.normalization >= RustLib {
@@ -218,20 +214,11 @@ impl<'a> Filter<'a> {
             }
         }
 
-        let case_insensitive = self.normalization >= CaseInsensitivePathReplace;
-        let replace_path = |line: &str, pattern: &str, replacement: &str| {
-            if case_insensitive {
-                replace_case_insensitive(line, pattern, replacement)
-            } else {
-                line.replace(pattern, replacement)
-            }
-        };
-
         if self.normalization >= DirBackslash {
             // https://github.com/dtolnay/trybuild/issues/66
             let source_dir_with_backslash =
                 self.context.source_dir.to_string_lossy().into_owned() + "\\";
-            line = replace_path(&line, &source_dir_with_backslash, "$DIR/");
+            line = replace_case_insensitive(&line, &source_dir_with_backslash, "$DIR/");
         }
 
         if self.normalization >= TrimEnd {
@@ -248,8 +235,8 @@ impl<'a> Filter<'a> {
         }
 
         line = line.replace(self.context.krate, "$CRATE");
-        line = replace_path(&line, &self.context.source_dir.to_string_lossy(), "$DIR");
-        line = replace_path(
+        line = replace_case_insensitive(&line, &self.context.source_dir.to_string_lossy(), "$DIR");
+        line = replace_case_insensitive(
             &line,
             &self.context.workspace.to_string_lossy(),
             "$WORKSPACE",
