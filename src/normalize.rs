@@ -51,6 +51,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         RustLib,
         TypeDirBackslash,
         WorkspaceLines,
+        CaseInsensitivePathReplace,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -85,6 +86,7 @@ enum Normalization {
     RustLib,
     TypeDirBackslash,
     WorkspaceLines,
+    CaseInsensitivePathReplace,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -142,6 +144,13 @@ impl<'a> Filter<'a> {
             if let Some(i) = line.find(workspace_pat.as_ref()) {
                 line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
                 other_crate = true;
+            } else if self.normalization >= CaseInsensitivePathReplace {
+                let line_lower = line.to_ascii_lowercase();
+                let workspace_pat_lower = workspace_pat.to_ascii_lowercase();
+                if let Some(i) = line_lower.find(&workspace_pat_lower) {
+                    line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
+                    other_crate = true;
+                }
             }
             let mut line = line.replace('\\', "/");
             if self.normalization >= RustLib {
@@ -209,11 +218,20 @@ impl<'a> Filter<'a> {
             }
         }
 
+        let case_insensitive = self.normalization >= CaseInsensitivePathReplace;
+        let replace_path = |line: &str, pattern: &str, replacement: &str| {
+            if case_insensitive {
+                replace_case_insensitive(line, pattern, replacement)
+            } else {
+                line.replace(pattern, replacement)
+            }
+        };
+
         if self.normalization >= DirBackslash {
             // https://github.com/dtolnay/trybuild/issues/66
             let source_dir_with_backslash =
                 self.context.source_dir.to_string_lossy().into_owned() + "\\";
-            line = line.replace(&source_dir_with_backslash, "$DIR/");
+            line = replace_path(&line, &source_dir_with_backslash, "$DIR/");
         }
 
         if self.normalization >= TrimEnd {
@@ -229,13 +247,13 @@ impl<'a> Filter<'a> {
             }
         }
 
-        line = line
-            .replace(self.context.krate, "$CRATE")
-            .replace(self.context.source_dir.to_string_lossy().as_ref(), "$DIR")
-            .replace(
-                self.context.workspace.to_string_lossy().as_ref(),
-                "$WORKSPACE",
-            );
+        line = line.replace(self.context.krate, "$CRATE");
+        line = replace_path(&line, &self.context.source_dir.to_string_lossy(), "$DIR");
+        line = replace_path(
+            &line,
+            &self.context.workspace.to_string_lossy(),
+            "$WORKSPACE",
+        );
 
         Some(line)
     }
@@ -258,4 +276,19 @@ fn hide_trailing_numbers(line: &mut String) {
         }
         line.truncate(line.len() - digits - 1);
     }
+}
+
+fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> String {
+    let line_lower = line.to_ascii_lowercase();
+    let pattern_lower = pattern.to_ascii_lowercase();
+    let mut replaced = String::with_capacity(line.len());
+    for (i, keep) in line_lower.split(&pattern_lower).enumerate() {
+        if i > 0 {
+            replaced.push_str(replacement);
+        }
+        let begin = replaced.len() - i * replacement.len() + i * pattern.len();
+        let end = begin + keep.len();
+        replaced.push_str(&line[begin..end]);
+    }
+    replaced
 }
