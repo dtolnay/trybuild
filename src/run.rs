@@ -1,20 +1,16 @@
+use crate::dependencies::{self, Dependency};
+use crate::env::Update;
+use crate::error::{Error, Result};
+use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
+use crate::message::{self, Fail, Warn};
+use crate::normalize::{self, Context, Variations};
+use crate::{cargo, features, rustflags, Expected, Runner, Test};
 use std::collections::BTreeMap as Map;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
-
-use super::{Expected, Runner, Test};
-use crate::cargo;
-use crate::dependencies::{self, Dependency};
-use crate::env::Update;
-use crate::error::{Error, Result};
-use crate::features;
-use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
-use crate::message::{self, Fail, Warn};
-use crate::normalize::{self, Context, Variations};
-use crate::rustflags;
 
 #[derive(Debug)]
 pub struct Project {

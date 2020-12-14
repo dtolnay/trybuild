@@ -1,14 +1,10 @@
-use termcolor::Color::{self, *};
-
-use super::{Expected, Test};
 use crate::diff::{Diff, Render};
 use crate::error::Error;
-use crate::normalize;
-use crate::term;
-
+use crate::{normalize, term, Expected, Test};
 use std::env;
 use std::path::Path;
 use std::process::Output;
+use termcolor::Color::{self, *};
 
 pub(crate) enum Level {
     Fail,

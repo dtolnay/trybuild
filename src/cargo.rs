@@ -1,11 +1,10 @@
-use serde::Deserialize;
-use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
-
 use crate::error::{Error, Result};
 use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
+use serde::Deserialize;
+use std::path::PathBuf;
+use std::process::{Command, Output, Stdio};
 
 #[derive(Deserialize)]
 pub struct Metadata {
