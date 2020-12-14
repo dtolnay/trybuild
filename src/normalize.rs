@@ -138,8 +138,13 @@ impl<'a> Filter<'a> {
 
         if line.trim_start().starts_with("::: ") {
             let mut other_crate = false;
-            let workspace_pat = self.context.workspace.to_string_lossy();
-            if let Some(i) = line.find(workspace_pat.as_ref()) {
+            let line_lower = line.to_ascii_lowercase();
+            let workspace_pat = self
+                .context
+                .workspace
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            if let Some(i) = line_lower.find(&workspace_pat) {
                 line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
                 other_crate = true;
             }
@@ -213,7 +218,7 @@ impl<'a> Filter<'a> {
             // https://github.com/dtolnay/trybuild/issues/66
             let source_dir_with_backslash =
                 self.context.source_dir.to_string_lossy().into_owned() + "\\";
-            line = line.replace(&source_dir_with_backslash, "$DIR/");
+            line = replace_case_insensitive(&line, &source_dir_with_backslash, "$DIR/");
         }
 
         if self.normalization >= TrimEnd {
@@ -229,13 +234,13 @@ impl<'a> Filter<'a> {
             }
         }
 
-        line = line
-            .replace(self.context.krate, "$CRATE")
-            .replace(self.context.source_dir.to_string_lossy().as_ref(), "$DIR")
-            .replace(
-                self.context.workspace.to_string_lossy().as_ref(),
-                "$WORKSPACE",
-            );
+        line = line.replace(self.context.krate, "$CRATE");
+        line = replace_case_insensitive(&line, &self.context.source_dir.to_string_lossy(), "$DIR");
+        line = replace_case_insensitive(
+            &line,
+            &self.context.workspace.to_string_lossy(),
+            "$WORKSPACE",
+        );
 
         Some(line)
     }
@@ -258,4 +263,19 @@ fn hide_trailing_numbers(line: &mut String) {
         }
         line.truncate(line.len() - digits - 1);
     }
+}
+
+fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> String {
+    let line_lower = line.to_ascii_lowercase();
+    let pattern_lower = pattern.to_ascii_lowercase();
+    let mut replaced = String::with_capacity(line.len());
+    for (i, keep) in line_lower.split(&pattern_lower).enumerate() {
+        if i > 0 {
+            replaced.push_str(replacement);
+        }
+        let begin = replaced.len() - i * replacement.len() + i * pattern.len();
+        let end = begin + keep.len();
+        replaced.push_str(&line[begin..end]);
+    }
+    replaced
 }
