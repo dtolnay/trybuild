@@ -22,7 +22,7 @@ pub struct Project {
     pub has_pass: bool,
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
-    workspace: PathBuf,
+    pub workspace: PathBuf,
 }
 
 impl Runner {

@@ -3,6 +3,7 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde::Deserialize;
+use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
@@ -29,7 +30,12 @@ fn cargo(project: &Project) -> Command {
 }
 
 pub fn build_dependencies(project: &Project) -> Result<()> {
-    let _ = cargo(project).arg("generate-lockfile").status();
+    let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
+    if workspace_cargo_lock.exists() {
+        let _ = fs::copy(workspace_cargo_lock, path!(project.dir / "Cargo.lock"));
+    } else {
+        let _ = cargo(project).arg("generate-lockfile").status();
+    }
 
     let status = cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
