@@ -51,7 +51,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo update -Z minimal-versions
-      - run: cargo update -p proc-macro2 --precise 1.0.5 # pending https://github.com/rust-lang/rust/issues/76399
       - run: cargo check
 
   clippy:
