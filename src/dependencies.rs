@@ -140,6 +140,8 @@ pub struct Patch {
     pub git: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
+    #[serde(flatten)]
+    pub rest: Map<String, Value>,
 }
 
 fn get_true() -> bool {
