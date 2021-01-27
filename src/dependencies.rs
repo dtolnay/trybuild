@@ -110,6 +110,14 @@ pub struct Dependency {
     pub default_features: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rev: Option<String>,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
 }
@@ -140,6 +148,12 @@ pub struct Patch {
     pub git: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rev: Option<String>,
+    #[serde(flatten)]
+    pub rest: Map<String, Value>,
 }
 
 fn get_true() -> bool {
@@ -185,6 +199,10 @@ impl<'de> Deserialize<'de> for Dependency {
                     path: None,
                     default_features: true,
                     features: Vec::new(),
+                    git: None,
+                    branch: None,
+                    tag: None,
+                    rev: None,
                     rest: Map::new(),
                 })
             }

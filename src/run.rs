@@ -163,6 +163,10 @@ impl Runner {
                 path: Some(project.source_dir.clone()),
                 default_features: false,
                 features: Vec::new(),
+                git: None,
+                branch: None,
+                tag: None,
+                rev: None,
                 rest: Map::new(),
             },
         );
