@@ -23,6 +23,13 @@ pub struct Project {
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
     pub workspace: PathBuf,
+    pub path_dependencies: Vec<PathDependency>,
+}
+
+#[derive(Debug)]
+pub struct PathDependency {
+    pub name: String,
+    pub normalized_path: PathBuf,
 }
 
 impl Runner {
@@ -77,8 +84,25 @@ impl Runner {
         let source_dir = env::var_os("CARGO_MANIFEST_DIR")
             .map(PathBuf::from)
             .ok_or(Error::ProjectDir)?;
+        let source_manifest = dependencies::get_manifest(&source_dir);
 
         let features = features::find();
+
+        let path_dependencies = source_manifest
+            .dependencies
+            .iter()
+            .filter_map(|(name, dep)| {
+                if let Some(path) = dep.path.as_ref() {
+                    let path_dependency = PathDependency {
+                        name: name.to_owned(),
+                        normalized_path: path.canonicalize().ok()?,
+                    };
+                    Some(path_dependency)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         let mut project = Project {
             dir: path!(target_dir / "tests" / crate_name),
@@ -90,9 +114,10 @@ impl Runner {
             has_compile_fail,
             features,
             workspace,
+            path_dependencies,
         };
 
-        let manifest = self.make_manifest(crate_name, &project, tests);
+        let manifest = self.make_manifest(crate_name, &project, tests, source_manifest);
         let manifest_toml = toml::to_string(&manifest)?;
 
         let config = self.make_config();
@@ -117,8 +142,8 @@ impl Runner {
         crate_name: String,
         project: &Project,
         tests: &[ExpandedTest],
+        source_manifest: crate::dependencies::Manifest,
     ) -> Manifest {
-        let source_manifest = dependencies::get_manifest(&project.source_dir);
         let workspace_manifest = dependencies::get_workspace_manifest(&project.workspace);
 
         let features = source_manifest
@@ -212,6 +237,7 @@ impl Test {
                 krate: &name.0,
                 source_dir: &project.source_dir,
                 workspace: &project.workspace,
+                path_dependencies: &project.path_dependencies,
             },
         );
 

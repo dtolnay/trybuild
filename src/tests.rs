@@ -8,6 +8,7 @@ macro_rules! test_normalize {
                 krate: "trybuild000",
                 source_dir: Path::new("/git/trybuild/test_suite"),
                 workspace: Path::new("/git/trybuild"),
+                path_dependencies: &[],
             };
             let original = $original.to_owned().into_bytes();
             let variations = super::diagnostics(original, context);
