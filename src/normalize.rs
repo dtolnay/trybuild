@@ -183,10 +183,24 @@ impl<'a> Filter<'a> {
 
             if self.normalization >= PathDependencies {
                 for path_dep in self.context.path_dependencies {
-                    line = line.replace(
-                        &path_dep.normalized_path.to_string_lossy().into_owned(),
-                        &format!("${}", path_dep.name.to_uppercase()),
-                    );
+                    let path = path_dep.normalized_path.to_string_lossy();
+                    if line.contains(path.as_ref()) {
+                        line = line
+                            .replace(path.as_ref(), &format!("${}", path_dep.name.to_uppercase()));
+                        hide_trailing_numbers(&mut line);
+                        self.hide_numbers = 2;
+
+                        for (fwd, next_line) in
+                            self.all_lines[index + 1..].iter().take(6).enumerate()
+                        {
+                            if next_line.trim_start().is_empty()
+                                || next_line.contains(" required by this bound in `")
+                            {
+                                self.hide_numbers = fwd;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 

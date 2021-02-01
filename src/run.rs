@@ -66,9 +66,11 @@ impl Runner {
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
-        let metadata = cargo::metadata()?;
-        let target_dir = metadata.target_directory;
-        let workspace = metadata.workspace_root;
+        let cargo::Metadata {
+            target_directory: target_dir,
+            workspace_root: workspace,
+            packages,
+        } = cargo::metadata()?;
 
         let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
@@ -93,11 +95,16 @@ impl Runner {
             .iter()
             .filter_map(|(name, dep)| {
                 if let Some(path) = dep.path.as_ref() {
-                    let path_dependency = PathDependency {
-                        name: name.to_owned(),
-                        normalized_path: path.canonicalize().ok()?,
-                    };
-                    Some(path_dependency)
+                    if packages.iter().any(|p| &p.name == name) {
+                        // Skip path dependencies coming from the workspace itself
+                        None
+                    } else {
+                        let path_dependency = PathDependency {
+                            name: name.to_owned(),
+                            normalized_path: path.canonicalize().ok()?,
+                        };
+                        Some(path_dependency)
+                    }
                 } else {
                     None
                 }

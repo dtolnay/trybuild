@@ -1,3 +1,4 @@
+use crate::run::PathDependency;
 use std::path::Path;
 
 macro_rules! test_normalize {
@@ -8,7 +9,10 @@ macro_rules! test_normalize {
                 krate: "trybuild000",
                 source_dir: Path::new("/git/trybuild/test_suite"),
                 workspace: Path::new("/git/trybuild"),
-                path_dependencies: &[],
+                path_dependencies: &[PathDependency {
+                    name: String::from("diesel"),
+                    normalized_path: Path::new("/home/user/documents/rust/diesel/diesel").into(),
+                }],
             };
             let original = $original.to_owned().into_bytes();
             let variations = super::diagnostics(original, context);
@@ -96,4 +100,34 @@ error[E0277]: `*mut _` cannot be shared between threads safely
     = help: the trait `std::marker::Sync` is not implemented for `*mut _`
     = note: required because of the requirements on the impl of `std::marker::Send` for `&*mut _`
     = note: required because it appears within the type `[closure@$DIR/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
+"}
+
+test_normalize! {test_strip_path_dependencies "
+error[E0277]: the trait bound `diesel::query_builder::SelectStatement<users::table, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<posts::columns::id, diesel::expression::bound::Bound<diesel::sql_types::Integer, i32>>>>>: diesel::query_builder::IntoUpdateTarget` is not satisfied
+  --> $DIR/update_requires_valid_where_clause.rs:21:12
+   |
+21 |     update(users::table.filter(posts::id.eq(1)));
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `diesel::query_builder::IntoUpdateTarget` is not implemented for `diesel::query_builder::SelectStatement<users::table, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<posts::columns::id, diesel::expression::bound::Bound<diesel::sql_types::Integer, i32>>>>>`
+   |
+  ::: /home/user/documents/rust/diesel/diesel/src/query_builder/functions.rs:78:18
+   |
+78 | pub fn update<T: IntoUpdateTarget>(source: T) -> UpdateStatement<T::Table, T::WhereClause> {
+   |                  ---------------- required by this bound in `diesel::update`
+   |
+   = help: the following implementations were found:
+             <diesel::query_builder::SelectStatement<F, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, W> as diesel::query_builder::IntoUpdateTarget>
+" "
+error[E0277]: the trait bound `diesel::query_builder::SelectStatement<users::table, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<posts::columns::id, diesel::expression::bound::Bound<diesel::sql_types::Integer, i32>>>>>: diesel::query_builder::IntoUpdateTarget` is not satisfied
+  --> $DIR/update_requires_valid_where_clause.rs:21:12
+   |
+21 |     update(users::table.filter(posts::id.eq(1)));
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `diesel::query_builder::IntoUpdateTarget` is not implemented for `diesel::query_builder::SelectStatement<users::table, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, diesel::query_builder::where_clause::WhereClause<diesel::expression::grouped::Grouped<diesel::expression::operators::Eq<posts::columns::id, diesel::expression::bound::Bound<diesel::sql_types::Integer, i32>>>>>`
+   |
+  ::: $DIESEL/src/query_builder/functions.rs
+   |
+   | pub fn update<T: IntoUpdateTarget>(source: T) -> UpdateStatement<T::Table, T::WhereClause> {
+   |                  ---------------- required by this bound in `diesel::update`
+   |
+   = help: the following implementations were found:
+             <diesel::query_builder::SelectStatement<F, diesel::query_builder::select_clause::DefaultSelectClause, diesel::query_builder::distinct_clause::NoDistinctClause, W> as diesel::query_builder::IntoUpdateTarget>
 "}

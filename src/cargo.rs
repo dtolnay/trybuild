@@ -11,6 +11,12 @@ use std::process::{Command, Output, Stdio};
 pub struct Metadata {
     pub target_directory: PathBuf,
     pub workspace_root: PathBuf,
+    pub packages: Vec<Package>,
+}
+
+#[derive(Deserialize)]
+pub struct Package {
+    pub name: String,
 }
 
 fn raw_cargo() -> Command {
