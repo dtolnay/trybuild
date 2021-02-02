@@ -5,7 +5,7 @@ use crate::rustflags;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env::var, fs};
+use std::{env, fs};
 
 #[derive(Deserialize)]
 pub struct Metadata {
@@ -14,7 +14,10 @@ pub struct Metadata {
 }
 
 fn raw_cargo() -> Command {
-    Command::new(var("CARGO").unwrap_or("cargo".to_string()))
+    match env::var_os("CARGO") {
+        Some(cargo) => Command::new(cargo),
+        None => Command::new("cargo"),
+    }
 }
 
 fn cargo(project: &Project) -> Command {
