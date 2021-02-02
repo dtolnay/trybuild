@@ -3,9 +3,9 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde::Deserialize;
-use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
+use std::{env::var, fs};
 
 #[derive(Deserialize)]
 pub struct Metadata {
@@ -14,7 +14,7 @@ pub struct Metadata {
 }
 
 fn raw_cargo() -> Command {
-    Command::new(option_env!("CARGO").unwrap_or("cargo"))
+    Command::new(var("CARGO").unwrap_or("cargo".to_string()))
 }
 
 fn cargo(project: &Project) -> Command {
