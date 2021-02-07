@@ -212,17 +212,13 @@
     clippy::collapsible_if,
     clippy::default_trait_access,
     clippy::doc_markdown,
-    clippy::empty_enum,
     clippy::enum_glob_use,
-    clippy::manual_range_contains,
-    clippy::match_like_matches_macro,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::needless_pass_by_value,
     clippy::non_ascii_literal,
     clippy::range_plus_one,
     clippy::single_match_else,
-    clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
     clippy::unused_self
 )]
