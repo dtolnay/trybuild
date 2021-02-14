@@ -1,10 +1,11 @@
+use crate::cargo::{self, Metadata};
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
-use crate::{cargo, features, rustflags, Expected, Runner, Test};
+use crate::{features, rustflags, Expected, Runner, Test};
 use std::collections::BTreeMap as Map;
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -66,7 +67,7 @@ impl Runner {
     }
 
     fn prepare(&self, tests: &[ExpandedTest]) -> Result<Project> {
-        let cargo::Metadata {
+        let Metadata {
             target_directory: target_dir,
             workspace_root: workspace,
             packages,
@@ -94,19 +95,15 @@ impl Runner {
             .dependencies
             .iter()
             .filter_map(|(name, dep)| {
-                if let Some(path) = dep.path.as_ref() {
-                    if packages.iter().any(|p| &p.name == name) {
-                        // Skip path dependencies coming from the workspace itself
-                        None
-                    } else {
-                        let path_dependency = PathDependency {
-                            name: name.to_owned(),
-                            normalized_path: path.canonicalize().ok()?,
-                        };
-                        Some(path_dependency)
-                    }
-                } else {
+                let path = dep.path.as_ref()?;
+                if packages.iter().any(|p| &p.name == name) {
+                    // Skip path dependencies coming from the workspace itself
                     None
+                } else {
+                    Some(PathDependency {
+                        name: name.to_owned(),
+                        normalized_path: path.canonicalize().ok()?,
+                    })
                 }
             })
             .collect();
@@ -149,7 +146,7 @@ impl Runner {
         crate_name: String,
         project: &Project,
         tests: &[ExpandedTest],
-        source_manifest: crate::dependencies::Manifest,
+        source_manifest: dependencies::Manifest,
     ) -> Manifest {
         let workspace_manifest = dependencies::get_workspace_manifest(&project.workspace);
 
