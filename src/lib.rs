@@ -219,6 +219,7 @@
     clippy::non_ascii_literal,
     clippy::range_plus_one,
     clippy::single_match_else,
+    clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
     clippy::unused_self
 )]
