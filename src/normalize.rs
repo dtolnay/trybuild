@@ -152,8 +152,22 @@ impl<'a> Filter<'a> {
                 line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
                 other_crate = true;
             }
+            if self.normalization >= PathDependencies && !other_crate {
+                for path_dep in self.context.path_dependencies {
+                    let path_dep_pat = path_dep
+                        .normalized_path
+                        .to_string_lossy()
+                        .to_ascii_lowercase();
+                    if let Some(i) = line_lower.find(&path_dep_pat) {
+                        let var = format!("${}", path_dep.name.to_uppercase().replace('-', "_"));
+                        line.replace_range(i..i + path_dep_pat.len(), &var);
+                        other_crate = true;
+                        break;
+                    }
+                }
+            }
             let mut line = line.replace('\\', "/");
-            if self.normalization >= RustLib {
+            if self.normalization >= RustLib && !other_crate {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
@@ -180,30 +194,6 @@ impl<'a> Filter<'a> {
                     }
                 }
             }
-
-            if self.normalization >= PathDependencies {
-                for path_dep in self.context.path_dependencies {
-                    let path = path_dep.normalized_path.to_string_lossy();
-                    if line.contains(path.as_ref()) {
-                        line = line
-                            .replace(path.as_ref(), &format!("${}", path_dep.name.to_uppercase()));
-                        hide_trailing_numbers(&mut line);
-                        self.hide_numbers = 2;
-
-                        for (fwd, next_line) in
-                            self.all_lines[index + 1..].iter().take(6).enumerate()
-                        {
-                            if next_line.trim_start().is_empty()
-                                || next_line.contains(" required by this bound in `")
-                            {
-                                self.hide_numbers = fwd;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
             return Some(line);
         }
 
