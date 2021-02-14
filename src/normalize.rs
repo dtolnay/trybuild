@@ -2,6 +2,7 @@
 #[path = "tests.rs"]
 mod tests;
 
+use crate::run::PathDependency;
 use std::path::Path;
 
 #[derive(Copy, Clone)]
@@ -9,6 +10,7 @@ pub struct Context<'a> {
     pub krate: &'a str,
     pub source_dir: &'a Path,
     pub workspace: &'a Path,
+    pub path_dependencies: &'a [PathDependency],
 }
 
 pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
@@ -51,6 +53,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         RustLib,
         TypeDirBackslash,
         WorkspaceLines,
+        PathDependencies,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -85,6 +88,7 @@ enum Normalization {
     RustLib,
     TypeDirBackslash,
     WorkspaceLines,
+    PathDependencies,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -176,6 +180,30 @@ impl<'a> Filter<'a> {
                     }
                 }
             }
+
+            if self.normalization >= PathDependencies {
+                for path_dep in self.context.path_dependencies {
+                    let path = path_dep.normalized_path.to_string_lossy();
+                    if line.contains(path.as_ref()) {
+                        line = line
+                            .replace(path.as_ref(), &format!("${}", path_dep.name.to_uppercase()));
+                        hide_trailing_numbers(&mut line);
+                        self.hide_numbers = 2;
+
+                        for (fwd, next_line) in
+                            self.all_lines[index + 1..].iter().take(6).enumerate()
+                        {
+                            if next_line.trim_start().is_empty()
+                                || next_line.contains(" required by this bound in `")
+                            {
+                                self.hide_numbers = fwd;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             return Some(line);
         }
 
