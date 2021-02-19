@@ -213,6 +213,7 @@
     clippy::default_trait_access,
     clippy::doc_markdown,
     clippy::enum_glob_use,
+    clippy::let_underscore_drop,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::needless_pass_by_value,
