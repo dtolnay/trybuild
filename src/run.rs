@@ -101,7 +101,7 @@ impl Runner {
                     None
                 } else {
                     Some(PathDependency {
-                        name: name.to_owned(),
+                        name: name.clone(),
                         normalized_path: path.canonicalize().ok()?,
                     })
                 }
@@ -201,7 +201,7 @@ impl Runner {
         );
 
         manifest.bins.push(Bin {
-            name: Name(project.name.to_owned()),
+            name: Name(project.name.clone()),
             path: Path::new("main.rs").to_owned(),
         });
 
