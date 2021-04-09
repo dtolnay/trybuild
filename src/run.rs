@@ -2,6 +2,7 @@ use crate::cargo::{self, Metadata};
 use crate::dependencies::{self, Dependency};
 use crate::env::Update;
 use crate::error::{Error, Result};
+use crate::flock::Lock;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
@@ -25,6 +26,7 @@ pub struct Project {
     pub features: Option<Vec<String>>,
     pub workspace: PathBuf,
     pub path_dependencies: Vec<PathDependency>,
+    manifest: Manifest,
 }
 
 #[derive(Debug)]
@@ -38,7 +40,13 @@ impl Runner {
         let mut tests = expand_globs(&self.tests);
         filter(&mut tests);
 
-        let project = self.prepare(&tests).unwrap_or_else(|err| {
+        let (project, _lock) = (|| {
+            let project = self.prepare(&tests)?;
+            let lock = Lock::acquire(path!(project.dir / ".lock"));
+            self.write(&project)?;
+            Ok((project, lock))
+        })()
+        .unwrap_or_else(|err| {
             message::prepare_fail(err);
             panic!("tests failed");
         });
@@ -89,7 +97,7 @@ impl Runner {
             .ok_or(Error::ProjectDir)?;
         let source_manifest = dependencies::get_manifest(&source_dir);
 
-        let features = features::find();
+        let mut features = features::find();
 
         let path_dependencies = source_manifest
             .dependencies
@@ -108,28 +116,43 @@ impl Runner {
             })
             .collect();
 
-        let mut project = Project {
-            dir: path!(target_dir / "tests" / crate_name),
+        let project_dir = path!(target_dir / "tests" / crate_name);
+        fs::create_dir_all(&project_dir)?;
+
+        let project_name = format!("{}-tests", crate_name);
+        let manifest = self.make_manifest(
+            crate_name,
+            &workspace,
+            &project_name,
+            &source_dir,
+            tests,
+            source_manifest,
+        );
+
+        if let Some(enabled_features) = &mut features {
+            enabled_features.retain(|feature| manifest.features.contains_key(feature));
+        }
+
+        Ok(Project {
+            dir: project_dir,
             source_dir,
             target_dir,
-            name: format!("{}-tests", crate_name),
+            name: project_name,
             update: Update::env()?,
             has_pass,
             has_compile_fail,
             features,
             workspace,
             path_dependencies,
-        };
+            manifest,
+        })
+    }
 
-        let manifest = self.make_manifest(crate_name, &project, tests, source_manifest);
-        let manifest_toml = toml::to_string(&manifest)?;
+    fn write(&self, project: &Project) -> Result<()> {
+        let manifest_toml = toml::to_string(&project.manifest)?;
 
         let config = self.make_config();
         let config_toml = toml::to_string(&config)?;
-
-        if let Some(enabled_features) = &mut project.features {
-            enabled_features.retain(|feature| manifest.features.contains_key(feature));
-        }
 
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
         fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
@@ -138,17 +161,19 @@ impl Runner {
 
         cargo::build_dependencies(&project)?;
 
-        Ok(project)
+        Ok(())
     }
 
     fn make_manifest(
         &self,
         crate_name: String,
-        project: &Project,
+        workspace: &Path,
+        project_name: &str,
+        source_dir: &Path,
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
     ) -> Manifest {
-        let workspace_manifest = dependencies::get_workspace_manifest(&project.workspace);
+        let workspace_manifest = dependencies::get_workspace_manifest(workspace);
 
         let features = source_manifest
             .features
@@ -161,7 +186,7 @@ impl Runner {
 
         let mut manifest = Manifest {
             package: Package {
-                name: project.name.clone(),
+                name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
                 edition: source_manifest.package.edition,
                 publish: false,
@@ -189,7 +214,7 @@ impl Runner {
             crate_name,
             Dependency {
                 version: None,
-                path: Some(project.source_dir.clone()),
+                path: Some(source_dir.to_owned()),
                 default_features: false,
                 features: Vec::new(),
                 git: None,
@@ -201,7 +226,7 @@ impl Runner {
         );
 
         manifest.bins.push(Bin {
-            name: Name(project.name.clone()),
+            name: Name(project_name.to_owned()),
             path: Path::new("main.rs").to_owned(),
         });
 
@@ -209,7 +234,7 @@ impl Runner {
             if expanded.error.is_none() {
                 manifest.bins.push(Bin {
                     name: expanded.name.clone(),
-                    path: project.source_dir.join(&expanded.test.path),
+                    path: source_dir.join(&expanded.test.path),
                 });
             }
         }
