@@ -6,8 +6,8 @@ use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, rustflags, Expected, Runner, Test};
-use rustc_hash::FxHasher;
 use std::collections::BTreeMap as Map;
+use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -112,7 +112,7 @@ impl Runner {
 
         let mut project = Project {
             dir: path!(target_dir / "tests" / crate_name / {
-                let mut hasher = FxHasher::default();
+                let mut hasher = DefaultHasher::new();
                 self.tests.iter().map(|test| test.path.clone()).collect::<Vec<_>>().hash(&mut hasher);
                 hasher.finish()
             }.to_string()),
