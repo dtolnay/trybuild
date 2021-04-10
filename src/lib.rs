@@ -224,6 +224,7 @@
     clippy::trivially_copy_pass_by_ref,
     clippy::unused_self
 )]
+#![deny(clippy::clone_on_ref_ptr)]
 
 #[macro_use]
 mod term;

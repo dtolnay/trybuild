@@ -57,7 +57,7 @@ impl FileLock {
         };
         let done = Arc::new(AtomicBool::new(false));
         thread::spawn({
-            let done = done.clone();
+            let done = Arc::clone(&done);
             move || poll(lockfile, done)
         });
         FileLock::Locked { path, done }
