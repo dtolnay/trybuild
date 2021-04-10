@@ -237,6 +237,7 @@ mod diff;
 mod env;
 mod error;
 mod features;
+mod flock;
 mod manifest;
 mod message;
 mod normalize;
