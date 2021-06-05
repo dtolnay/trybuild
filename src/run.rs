@@ -159,7 +159,7 @@ impl Runner {
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
         fs::write(path!(project.dir / "main.rs"), b"fn main() {}\n")?;
 
-        cargo::build_dependencies(&project)?;
+        cargo::build_dependencies(project)?;
 
         Ok(())
     }
