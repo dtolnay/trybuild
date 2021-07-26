@@ -153,7 +153,7 @@ error[E0277]: the trait bound `Thread: serde::de::Deserialize<'_>` is not satisf
 2    |     let _ = serde_json::from_str::<std::thread::Thread>(\"???\");
      |                                    ^^^^^^^^^^^^^^^^^^^ the trait `serde::de::Deserialize<'_>` is not implemented for `Thread`
      |
-    ::: $CARGO_REGISTRY/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs
+    ::: $CARGO/serde_json-1.0.64/src/de.rs
      |
      |     T: de::Deserialize<'a>,
      |        ------------------- required by this bound in `serde_json::from_str`
