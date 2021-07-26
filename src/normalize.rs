@@ -54,6 +54,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         TypeDirBackslash,
         WorkspaceLines,
         PathDependencies,
+        CargoRegistry,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -89,6 +90,7 @@ enum Normalization {
     TypeDirBackslash,
     WorkspaceLines,
     PathDependencies,
+    CargoRegistry,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -175,6 +177,13 @@ impl<'a> Filter<'a> {
                 } else if let Some(pos) = line.find("/rustlib/src/rust/library/") {
                     // ::: $RUST/std/src/net/ip.rs:83:1
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 25, "$RUST");
+                    other_crate = true;
+                }
+            }
+            if self.normalization >= CargoRegistry && !other_crate {
+                if let Some(pos) = line.find("/registry/src/") {
+                    // ::: $CARGO_REGISTRY/registry/src/github-com-hash/libstd/net/ip.rs:83:1
+                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 13, "$CARGO_REGISTRY");
                     other_crate = true;
                 }
             }
