@@ -182,7 +182,7 @@ impl<'a> Filter<'a> {
             }
             if self.normalization >= CargoRegistry && !other_crate {
                 if let Some(pos) = line.find("/registry/src/") {
-                    // ::: $CARGO_REGISTRY/registry/src/github-com-hash/libstd/net/ip.rs:83:1
+                    // ::: $CARGO_REGISTRY/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
                     line.replace_range(line.find("::: ").unwrap() + 4..pos + 13, "$CARGO_REGISTRY");
                     other_crate = true;
                 }
