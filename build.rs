@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
 
     let path = Path::new(&out_dir).join("target.rs");
     let value = match target {
-        Some(target) => format!("Some({:?})", target),
+        Some(target) => format!(r#"Some("{}")"#, target.escape_debug()),
         None => "None".to_owned(),
     };
     let content = format!("const TARGET: Option<&'static str> = {};", value);
