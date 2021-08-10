@@ -11,6 +11,6 @@ fn main() -> io::Result<()> {
         Some(target) => format!(r#"Some("{}")"#, target.escape_debug()),
         None => "None".to_owned(),
     };
-    let content = format!("const TARGET: Option<&'static str> = {};", value);
+    let content = format!("const TARGET: Option<&str> = {};", value);
     fs::write(path, content)
 }

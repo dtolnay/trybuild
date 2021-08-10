@@ -245,6 +245,22 @@ mod normalize;
 mod run;
 mod rustflags;
 
+// When --target flag is passed, cargo does not pass RUSTFLAGS to rustc when
+// building proc-macro and build script even if the host and target triples are
+// the same. Therefore, if we always pass --target to cargo, tools such as
+// coverage that require RUSTFLAGS do not work for tests run by trybuild.
+//
+// To avoid that problem, do not pass --target to cargo if we know that it has
+// not been passed.
+//
+// Currently, cargo does not have a way to tell the build script whether
+// --target has been passed or not, and there is no heuristic that can handle
+// this well.
+//
+// Therefore, expose a cfg to always treat the target as host.
+#[cfg(trybuild_no_target)]
+const TARGET: Option<&str> = None;
+#[cfg(not(trybuild_no_target))]
 include!(concat!(env!("OUT_DIR"), "/target.rs"));
 
 use std::cell::RefCell;
