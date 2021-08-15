@@ -138,7 +138,7 @@ fn target() -> Vec<&'static str> {
     // Therefore, expose a cfg to always treat the target as host.
     if cfg!(trybuild_no_target) {
         vec![]
-    } else if let Some(target) = crate::TARGET {
+    } else if let Some(target) = include!(concat!(env!("OUT_DIR"), "/target")) {
         vec!["--target", target]
     } else {
         vec![]
