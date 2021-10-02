@@ -3,6 +3,7 @@ name = "trybuild"
 version = "1.0.45"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
+rust-version = "1.34"
 license = "MIT OR Apache-2.0"
 description = "Test harness for ui tests of compiler diagnostics"
 repository = "https://github.com/dtolnay/trybuild"
