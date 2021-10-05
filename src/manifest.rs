@@ -36,6 +36,8 @@ pub enum Edition {
     E2015,
     #[serde(rename = "2018")]
     E2018,
+    #[serde(rename = "2021")]
+    E2021,
 }
 
 #[derive(Serialize, Debug)]
