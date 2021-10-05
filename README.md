@@ -73,11 +73,12 @@ A compile\_fail test that fails to fail to compile is also a failure.
 </a>
 </p>
 
-To test just one source file, use
+To test just one source file, use:
 ```
 cargo test -- ui trybuild=example.rs
 ```
-where `ui` is the name of the `#[test]` funtion that invokes `trybuild`, and `example.rs` is the name of the file to test.
+where `ui` is the name of the `#[test]` funtion that invokes `trybuild`, and
+`example.rs` is the name of the file to test.
 
 <br>
 
