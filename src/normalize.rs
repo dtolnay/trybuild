@@ -55,6 +55,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         WorkspaceLines,
         PathDependencies,
         CargoRegistry,
+        ArrowOtherCrate,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -91,6 +92,7 @@ enum Normalization {
     WorkspaceLines,
     PathDependencies,
     CargoRegistry,
+    ArrowOtherCrate,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -135,17 +137,35 @@ impl<'a> Filter<'a> {
             self.hide_numbers -= 1;
         }
 
-        if line.trim_start().starts_with("--> ") {
+        let trim_start = line.trim_start();
+        let prefix = if trim_start.starts_with("--> ") {
+            Some("--> ")
+        } else if trim_start.starts_with("::: ") {
+            Some("::: ")
+        } else {
+            None
+        };
+
+        if prefix == Some("--> ") && self.normalization < ArrowOtherCrate {
             if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
                 let cut_start = line.find('>').unwrap() + 2;
                 return Some(line[..cut_start].to_owned() + "$DIR/" + &line[cut_end + 1..]);
             }
         }
 
-        if line.trim_start().starts_with("::: ") {
-            let mut other_crate = false;
+        if let Some(prefix) = prefix {
             line = line.replace('\\', "/");
             let line_lower = line.to_ascii_lowercase();
+            let source_dir_pat = self
+                .context
+                .source_dir
+                .to_string_lossy()
+                .to_ascii_lowercase();
+            if let Some(i) = line_lower.find(&source_dir_pat) {
+                line.replace_range(i..i + source_dir_pat.len(), "$DIR");
+                return Some(line);
+            }
+            let mut other_crate = false;
             let workspace_pat = self
                 .context
                 .workspace
@@ -174,18 +194,18 @@ impl<'a> Filter<'a> {
             if self.normalization >= RustLib && !other_crate {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
-                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 17, "$RUST");
+                    line.replace_range(line.find(prefix).unwrap() + 4..pos + 17, "$RUST");
                     other_crate = true;
                 } else if let Some(pos) = line.find("/rustlib/src/rust/library/") {
                     // ::: $RUST/std/src/net/ip.rs:83:1
-                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 25, "$RUST");
+                    line.replace_range(line.find(prefix).unwrap() + 4..pos + 25, "$RUST");
                     other_crate = true;
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
                 if let Some(pos) = line.find("/registry/src/github.com-") {
                     // ::: $CARGO/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
-                    line.replace_range(line.find("::: ").unwrap() + 4..pos + 41, "$CARGO");
+                    line.replace_range(line.find(prefix).unwrap() + 4..pos + 41, "$CARGO");
                     other_crate = true;
                 }
             }
