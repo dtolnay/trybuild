@@ -55,6 +55,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         PathDependencies,
         CargoRegistry,
         ArrowOtherCrate,
+        RelativeToDir,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -91,6 +92,7 @@ enum Normalization {
     PathDependencies,
     CargoRegistry,
     ArrowOtherCrate,
+    RelativeToDir,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -136,6 +138,7 @@ impl<'a> Filter<'a> {
         }
 
         let trim_start = line.trim_start();
+        let indent = line.len() - trim_start.len();
         let prefix = if trim_start.starts_with("--> ") {
             Some("--> ")
         } else if trim_start.starts_with("::: ") {
@@ -162,7 +165,11 @@ impl<'a> Filter<'a> {
                 .to_ascii_lowercase()
                 .replace('\\', "/");
             if let Some(i) = line_lower.find(&source_dir_pat) {
-                line.replace_range(i..i + source_dir_pat.len() - 1, "$DIR");
+                if self.normalization >= RelativeToDir && i == indent + 4 {
+                    line.replace_range(i..i + source_dir_pat.len(), "");
+                } else {
+                    line.replace_range(i..i + source_dir_pat.len() - 1, "$DIR");
+                }
                 return Some(line);
             }
             let mut other_crate = false;
