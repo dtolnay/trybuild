@@ -40,7 +40,7 @@ error: could not compile `trybuild-tests`.
 To learn more, run the command again with --verbose.
 " "
 error: `self` parameter is only allowed in associated functions
-  --> $DIR/error.rs:11:23
+  --> $DIR/ui/error.rs:11:23
    |
 11 | async fn bad_endpoint(self) -> Result<HttpResponseOkObject<()>, HttpError> {
    |                       ^^^^ not semantically valid as function parameter
@@ -51,7 +51,7 @@ error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not 
    --> \\git\\trybuild\\test_suite\\ui\\error.rs:22:61
 " "
 error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not satisfied
-   --> $DIR/error.rs:22:61
+   --> $DIR/ui/error.rs:22:61
 "}
 
 test_normalize! {test_rust_lib "
@@ -70,7 +70,7 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 " "
 error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
-  --> $DIR/not-repeatable.rs:6:13
+  --> $DIR/ui/not-repeatable.rs:6:13
    |
 6  |     let _ = quote! { #(#ip)* };
    |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
@@ -96,7 +96,7 @@ error[E0277]: `*mut _` cannot be shared between threads safely
     = note: required because it appears within the type `[closure@/git/trybuild/test_suite/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
 " "
 error[E0277]: `*mut _` cannot be shared between threads safely
-   --> $DIR/compile-fail-3.rs:7:5
+   --> $DIR/ui/compile-fail-3.rs:7:5
     |
 7   |     thread::spawn(|| {
     |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
@@ -152,7 +152,7 @@ For more information about this error, try `rustc --explain E0277`.
 error: could not compile `testing` due to previous error
 " "
 error[E0277]: the trait bound `Thread: serde::de::Deserialize<'_>` is not satisfied
-    --> $DIR/main.rs:2:36
+    --> src/main.rs:2:36
      |
 2    |     let _ = serde_json::from_str::<std::thread::Thread>(\"???\");
      |                                    ^^^^^^^^^^^^^^^^^^^ the trait `serde::de::Deserialize<'_>` is not implemented for `Thread`
@@ -161,4 +161,90 @@ error[E0277]: the trait bound `Thread: serde::de::Deserialize<'_>` is not satisf
      |
      |     T: de::Deserialize<'a>,
      |        ------------------- required by this bound in `serde_json::from_str`
+"}
+
+test_normalize! {test_traits_must_be_implemented "
+error[E0599]: the method `anyhow_kind` exists for reference `&Error`, but its trait bounds were not satisfied
+   --> src/main.rs:7:13
+    |
+4   | struct Error;
+    | -------------
+    | |
+    | doesn't satisfy `Error: Into<anyhow::Error>`
+    | doesn't satisfy `Error: anyhow::private::kind::TraitKind`
+    | doesn't satisfy `Error: std::fmt::Display`
+...
+7   |     let _ = anyhow!(Error);
+    |             ^^^^^^^^^^^^^^ method cannot be called on `&Error` due to unsatisfied trait bounds
+    |
+    = note: the following trait bounds were not satisfied:
+            `Error: Into<anyhow::Error>`
+            which is required by `Error: anyhow::private::kind::TraitKind`
+            `Error: std::fmt::Display`
+            which is required by `&Error: anyhow::private::kind::AdhocKind`
+            `&Error: Into<anyhow::Error>`
+            which is required by `&Error: anyhow::private::kind::TraitKind`
+note: the following traits must be implemented
+   --> /rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/convert/mod.rs:274:1
+    |
+274 | / pub trait Into<T>: Sized {
+275 | |     /// Performs the conversion.
+276 | |     #[stable(feature = \"rust1\", since = \"1.0.0\")]
+277 | |     fn into(self) -> T;
+278 | | }
+    | |_^
+    |
+   ::: /rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/fmt/mod.rs:715:1
+    |
+715 | / pub trait Display {
+716 | |     /// Formats the value using the given formatter.
+717 | |     ///
+718 | |     /// # Examples
+...   |
+738 | |     fn fmt(&self, f: &mut Formatter<'_>) -> Result;
+739 | | }
+    | |_^
+    = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
+" "
+error[E0599]: the method `anyhow_kind` exists for reference `&Error`, but its trait bounds were not satisfied
+   --> src/main.rs:7:13
+    |
+4   | struct Error;
+    | -------------
+    | |
+    | doesn't satisfy `Error: Into<anyhow::Error>`
+    | doesn't satisfy `Error: anyhow::private::kind::TraitKind`
+    | doesn't satisfy `Error: std::fmt::Display`
+...
+7   |     let _ = anyhow!(Error);
+    |             ^^^^^^^^^^^^^^ method cannot be called on `&Error` due to unsatisfied trait bounds
+    |
+    = note: the following trait bounds were not satisfied:
+            `Error: Into<anyhow::Error>`
+            which is required by `Error: anyhow::private::kind::TraitKind`
+            `Error: std::fmt::Display`
+            which is required by `&Error: anyhow::private::kind::AdhocKind`
+            `&Error: Into<anyhow::Error>`
+            which is required by `&Error: anyhow::private::kind::TraitKind`
+note: the following traits must be implemented
+   --> $RUST/core/src/convert/mod.rs
+    |
+    | / pub trait Into<T>: Sized {
+    | |     /// Performs the conversion.
+    | |     #[stable(feature = \"rust1\", since = \"1.0.0\")]
+    | |     fn into(self) -> T;
+    | | }
+    | |_^
+    |
+   ::: $RUST/core/src/fmt/mod.rs
+    |
+    | / pub trait Display {
+    | |     /// Formats the value using the given formatter.
+    | |     ///
+    | |     /// # Examples
+...   |
+    | |     fn fmt(&self, f: &mut Formatter<'_>) -> Result;
+    | | }
+    | |_^
+    = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
 "}
