@@ -162,7 +162,7 @@ impl<'a> Filter<'a> {
                 .to_ascii_lowercase()
                 .replace('\\', "/");
             if let Some(i) = line_lower.find(&source_dir_pat) {
-                line.replace_range(i..i + source_dir_pat.len(), "$DIR");
+                line.replace_range(i..i + source_dir_pat.len() - 1, "$DIR");
                 return Some(line);
             }
             let mut other_crate = false;
@@ -173,7 +173,7 @@ impl<'a> Filter<'a> {
                 .to_ascii_lowercase()
                 .replace('\\', "/");
             if let Some(i) = line_lower.find(&workspace_pat) {
-                line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
+                line.replace_range(i..i + workspace_pat.len() - 1, "$WORKSPACE");
                 other_crate = true;
             }
             if self.normalization >= PathDependencies && !other_crate {
@@ -185,7 +185,7 @@ impl<'a> Filter<'a> {
                         .replace('\\', "/");
                     if let Some(i) = line_lower.find(&path_dep_pat) {
                         let var = format!("${}", path_dep.name.to_uppercase().replace('-', "_"));
-                        line.replace_range(i..i + path_dep_pat.len(), &var);
+                        line.replace_range(i..i + path_dep_pat.len() - 1, &var);
                         other_crate = true;
                         break;
                     }
@@ -275,11 +275,11 @@ impl<'a> Filter<'a> {
         }
 
         line = line.replace(self.context.krate, "$CRATE");
-        line = replace_case_insensitive(&line, &self.context.source_dir.to_string_lossy(), "$DIR");
+        line = replace_case_insensitive(&line, &self.context.source_dir.to_string_lossy(), "$DIR/");
         line = replace_case_insensitive(
             &line,
             &self.context.workspace.to_string_lossy(),
-            "$WORKSPACE",
+            "$WORKSPACE/",
         );
 
         Some(line)
