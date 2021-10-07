@@ -160,7 +160,8 @@ impl<'a> Filter<'a> {
                 .context
                 .source_dir
                 .to_string_lossy()
-                .to_ascii_lowercase();
+                .to_ascii_lowercase()
+                .replace('\\', "/");
             if let Some(i) = line_lower.find(&source_dir_pat) {
                 line.replace_range(i..i + source_dir_pat.len(), "$DIR");
                 return Some(line);
