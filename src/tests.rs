@@ -1,5 +1,5 @@
+use crate::directory::Directory;
 use crate::run::PathDependency;
-use std::path::Path;
 
 macro_rules! test_normalize {
     ($name:ident $original:literal $expected:literal) => {
@@ -7,11 +7,11 @@ macro_rules! test_normalize {
         fn $name() {
             let context = super::Context {
                 krate: "trybuild000",
-                source_dir: Path::new("/git/trybuild/test_suite"),
-                workspace: Path::new("/git/trybuild"),
+                source_dir: &Directory::new("/git/trybuild/test_suite"),
+                workspace: &Directory::new("/git/trybuild"),
                 path_dependencies: &[PathDependency {
                     name: String::from("diesel"),
-                    normalized_path: Path::new("/home/user/documents/rust/diesel/diesel").into(),
+                    normalized_path: Directory::new("/home/user/documents/rust/diesel/diesel"),
                 }],
             };
             let original = $original.to_owned().into_bytes();
