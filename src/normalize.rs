@@ -195,13 +195,11 @@ impl<'a> Filter<'a> {
                 // test stderr shouldn't need to be updated every time we touch
                 // those files.
                 hide_trailing_numbers(&mut line);
-                self.hide_numbers = 2;
-                for (fwd, next_line) in self.all_lines[index + 1..].iter().take(6).enumerate() {
-                    if next_line.trim_start().is_empty()
-                        || next_line.contains(" required by this bound in `")
-                    {
-                        self.hide_numbers = fwd;
-                        break;
+                self.hide_numbers = 1;
+                while let Some(next_line) = self.all_lines.get(index + self.hide_numbers) {
+                    match next_line.trim_start().chars().next().unwrap_or_default() {
+                        '0'..='9' | '|' | '.' => self.hide_numbers += 1,
+                        _ => break,
                     }
                 }
             }
