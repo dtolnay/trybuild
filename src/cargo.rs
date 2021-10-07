@@ -1,16 +1,16 @@
+use crate::directory::Directory;
 use crate::error::{Error, Result};
 use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde::Deserialize;
-use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::{env, fs};
 
 #[derive(Deserialize)]
 pub struct Metadata {
-    pub target_directory: PathBuf,
-    pub workspace_root: PathBuf,
+    pub target_directory: Directory,
+    pub workspace_root: Directory,
     pub packages: Vec<Package>,
 }
 

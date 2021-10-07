@@ -1,5 +1,6 @@
 use crate::cargo::{self, Metadata};
 use crate::dependencies::{self, Dependency};
+use crate::directory::Directory;
 use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::flock::Lock;
@@ -16,15 +17,15 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct Project {
-    pub dir: PathBuf,
-    source_dir: PathBuf,
-    pub target_dir: PathBuf,
+    pub dir: Directory,
+    source_dir: Directory,
+    pub target_dir: Directory,
     pub name: String,
     update: Update,
     pub has_pass: bool,
     has_compile_fail: bool,
     pub features: Option<Vec<String>>,
-    pub workspace: PathBuf,
+    pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
 }
@@ -32,7 +33,7 @@ pub struct Project {
 #[derive(Debug)]
 pub struct PathDependency {
     pub name: String,
-    pub normalized_path: PathBuf,
+    pub normalized_path: Directory,
 }
 
 impl Runner {
@@ -93,7 +94,7 @@ impl Runner {
         }
 
         let source_dir = env::var_os("CARGO_MANIFEST_DIR")
-            .map(PathBuf::from)
+            .map(Directory::from)
             .ok_or(Error::ProjectDir)?;
         let source_manifest = dependencies::get_manifest(&source_dir);
 
@@ -116,7 +117,7 @@ impl Runner {
             })
             .collect();
 
-        let project_dir = path!(target_dir / "tests" / crate_name);
+        let project_dir = path!(target_dir / "tests" / crate_name /);
         fs::create_dir_all(&project_dir)?;
 
         let project_name = format!("{}-tests", crate_name);
@@ -167,9 +168,9 @@ impl Runner {
     fn make_manifest(
         &self,
         crate_name: String,
-        workspace: &Path,
+        workspace: &Directory,
         project_name: &str,
-        source_dir: &Path,
+        source_dir: &Directory,
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
     ) -> Manifest {
@@ -214,7 +215,7 @@ impl Runner {
             crate_name,
             Dependency {
                 version: None,
-                path: Some(source_dir.to_owned()),
+                path: Some(source_dir.clone()),
                 default_features: false,
                 features: Vec::new(),
                 git: None,

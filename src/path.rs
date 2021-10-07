@@ -6,6 +6,10 @@ macro_rules! path {
 
 // Private implementation detail.
 macro_rules! tokenize_path {
+    ([$(($($component:tt)+))*] [$($cur:tt)+] /) => {
+        crate::directory::Directory::new(tokenize_path!([$(($($component)+))*] [$($cur)+]))
+    };
+
     ([$(($($component:tt)+))*] [$($cur:tt)+] / $($rest:tt)+) => {
         tokenize_path!([$(($($component)+))* ($($cur)+)] [] $($rest)+)
     };

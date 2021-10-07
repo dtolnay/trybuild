@@ -1,3 +1,4 @@
+use crate::directory::Directory;
 use crate::error::Error;
 use crate::manifest::Edition;
 use serde::de::value::MapAccessDeserializer;
@@ -6,15 +7,14 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap as Map;
 use std::fmt;
 use std::fs;
-use std::path::Path;
 use std::path::PathBuf;
 use toml::Value;
 
-pub fn get_manifest(manifest_dir: &Path) -> Manifest {
+pub fn get_manifest(manifest_dir: &Directory) -> Manifest {
     try_get_manifest(manifest_dir).unwrap_or_default()
 }
 
-fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
+fn try_get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: Manifest = toml::from_str(&manifest_str)?;
@@ -29,11 +29,11 @@ fn try_get_manifest(manifest_dir: &Path) -> Result<Manifest, Error> {
     Ok(manifest)
 }
 
-pub fn get_workspace_manifest(manifest_dir: &Path) -> WorkspaceManifest {
+pub fn get_workspace_manifest(manifest_dir: &Directory) -> WorkspaceManifest {
     try_get_workspace_manifest(manifest_dir).unwrap_or_default()
 }
 
-pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManifest, Error> {
+pub fn try_get_workspace_manifest(manifest_dir: &Directory) -> Result<WorkspaceManifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: WorkspaceManifest = toml::from_str(&manifest_str)?;
@@ -44,14 +44,14 @@ pub fn try_get_workspace_manifest(manifest_dir: &Path) -> Result<WorkspaceManife
     Ok(manifest)
 }
 
-fn fix_dependencies(dependencies: &mut Map<String, Dependency>, dir: &Path) {
+fn fix_dependencies(dependencies: &mut Map<String, Dependency>, dir: &Directory) {
     dependencies.remove("trybuild");
     for dep in dependencies.values_mut() {
-        dep.path = dep.path.as_ref().map(|path| dir.join(path));
+        dep.path = dep.path.as_ref().map(|path| Directory::new(dir.join(path)));
     }
 }
 
-fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
+fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Directory) {
     for registry in patches.values_mut() {
         registry.crates.remove("trybuild");
         for patch in registry.crates.values_mut() {
@@ -60,7 +60,7 @@ fn fix_patches(patches: &mut Map<String, RegistryPatch>, dir: &Path) {
     }
 }
 
-fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Path) {
+fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Directory) {
     replacements.remove("trybuild");
     for replacement in replacements.values_mut() {
         replacement.path = replacement.path.as_ref().map(|path| dir.join(path));
@@ -101,7 +101,7 @@ pub struct Dependency {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<PathBuf>,
+    pub path: Option<Directory>,
     #[serde(
         rename = "default-features",
         default = "get_true",
