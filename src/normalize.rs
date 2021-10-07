@@ -149,7 +149,8 @@ impl<'a> Filter<'a> {
         if prefix == Some("--> ") && self.normalization < ArrowOtherCrate {
             if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
                 let cut_start = line.find('>').unwrap() + 2;
-                return Some(line[..cut_start].to_owned() + "$DIR/" + &line[cut_end + 1..]);
+                line.replace_range(cut_start..cut_end + 1, "$DIR/");
+                return Some(line);
             }
         }
 
