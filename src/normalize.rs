@@ -48,7 +48,6 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         StripCouldNotCompile2,
         StripForMoreInformation,
         StripForMoreInformation2,
-        DirBackslash,
         TrimEnd,
         RustLib,
         TypeDirBackslash,
@@ -85,7 +84,6 @@ enum Normalization {
     StripCouldNotCompile2,
     StripForMoreInformation,
     StripForMoreInformation2,
-    DirBackslash,
     TrimEnd,
     RustLib,
     TypeDirBackslash,
@@ -263,13 +261,6 @@ impl<'a> Filter<'a> {
             }
         }
 
-        if self.normalization >= DirBackslash {
-            // https://github.com/dtolnay/trybuild/issues/66
-            let source_dir_with_backslash =
-                self.context.source_dir.to_string_lossy().into_owned() + "\\";
-            line = replace_case_insensitive(&line, &source_dir_with_backslash, "$DIR/");
-        }
-
         if self.normalization >= TrimEnd {
             line.truncate(line.trim_end().len());
         }
@@ -315,8 +306,8 @@ fn hide_trailing_numbers(line: &mut String) {
 }
 
 fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> String {
-    let line_lower = line.to_ascii_lowercase();
-    let pattern_lower = pattern.to_ascii_lowercase();
+    let line_lower = line.to_ascii_lowercase().replace('\\', "/");
+    let pattern_lower = pattern.to_ascii_lowercase().replace('\\', "/");
     let mut replaced = String::with_capacity(line.len());
     for (i, keep) in line_lower.split(&pattern_lower).enumerate() {
         if i > 0 {
