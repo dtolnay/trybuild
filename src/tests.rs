@@ -16,7 +16,11 @@ macro_rules! test_normalize {
             };
             let original = $original.to_owned().into_bytes();
             let variations = super::diagnostics(original, context);
-            assert_eq!(variations.preferred(), $expected);
+            let preferred = variations.preferred();
+            let expected = $expected;
+            if preferred != expected {
+                panic!("\nACTUAL: \"{}\"\nEXPECTED: \"{}\"", preferred, expected);
+            }
         }
     };
 }
