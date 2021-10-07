@@ -144,12 +144,14 @@ impl<'a> Filter<'a> {
 
         if line.trim_start().starts_with("::: ") {
             let mut other_crate = false;
+            line = line.replace('\\', "/");
             let line_lower = line.to_ascii_lowercase();
             let workspace_pat = self
                 .context
                 .workspace
                 .to_string_lossy()
-                .to_ascii_lowercase();
+                .to_ascii_lowercase()
+                .replace('\\', "/");
             if let Some(i) = line_lower.find(&workspace_pat) {
                 line.replace_range(i..i + workspace_pat.len(), "$WORKSPACE");
                 other_crate = true;
@@ -159,7 +161,8 @@ impl<'a> Filter<'a> {
                     let path_dep_pat = path_dep
                         .normalized_path
                         .to_string_lossy()
-                        .to_ascii_lowercase();
+                        .to_ascii_lowercase()
+                        .replace('\\', "/");
                     if let Some(i) = line_lower.find(&path_dep_pat) {
                         let var = format!("${}", path_dep.name.to_uppercase().replace('-', "_"));
                         line.replace_range(i..i + path_dep_pat.len(), &var);
@@ -168,7 +171,6 @@ impl<'a> Filter<'a> {
                     }
                 }
             }
-            let mut line = line.replace('\\', "/");
             if self.normalization >= RustLib && !other_crate {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // ::: $RUST/src/libstd/net/ip.rs:83:1
