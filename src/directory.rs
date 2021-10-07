@@ -12,8 +12,8 @@ pub struct Directory {
 
 impl Directory {
     pub fn new<P: Into<PathBuf>>(path: P) -> Self {
-        let path = path.into();
-        //TODO: path.push("");
+        let mut path = path.into();
+        path.push("");
         Directory { path }
     }
 
