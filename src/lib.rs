@@ -260,6 +260,7 @@ pub struct TestCases {
 #[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
+    features: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -278,7 +279,10 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner {
+                tests: Vec::new(),
+                features: vec![],
+            }),
         }
     }
 
@@ -294,6 +298,12 @@ impl TestCases {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
         });
+    }
+
+    pub fn features<S: Into<String>>(self, options: S) -> Self {
+        self.runner.borrow_mut().features =
+            options.into().split(',').map(|s| s.trim().into()).collect();
+        self
     }
 }
 

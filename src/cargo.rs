@@ -51,7 +51,7 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
         .args(target())
         .arg("--bin")
         .arg(&project.name)
-        .args(features(project))
+        .args(feature_to_options(&project.features))
         .status()
         .map_err(Error::Cargo)?;
 
@@ -77,7 +77,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .args(target())
         .arg("--bin")
         .arg(name)
-        .args(features(project))
+        .args(feature_to_options(&project.features))
         .arg("--quiet")
         .arg("--color=never")
         .output()
@@ -90,7 +90,7 @@ pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
         .args(target())
         .arg("--bin")
         .arg(name)
-        .args(features(project))
+        .args(feature_to_options(&project.features))
         .arg("--quiet")
         .arg("--color=never")
         .output()
@@ -111,14 +111,14 @@ pub fn metadata() -> Result<Metadata> {
     })
 }
 
-fn features(project: &Project) -> Vec<String> {
-    match &project.features {
-        Some(features) => vec![
+fn feature_to_options(features: &[String]) -> Vec<String> {
+    if features.is_empty() {
+        vec![]
+    } else {
+        vec![
             "--no-default-features".to_owned(),
-            "--features".to_owned(),
-            features.join(","),
-        ],
-        None => vec![],
+            format!("--features={}", features.join(",")),
+        ]
     }
 }
 

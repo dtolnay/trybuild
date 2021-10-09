@@ -17,6 +17,10 @@ readme = "README.md"
 # in https://github.com/dtolnay/trybuild/issues/41.
 diff = ["dissimilar"]
 
+# For run test with feature
+a = []
+b = []
+
 [dependencies]
 dissimilar = { version = "1.0", optional = true }
 glob = "0.3"

@@ -6,8 +6,8 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 
-pub fn find() -> Option<Vec<String>> {
-    try_find().ok()
+pub fn find() -> Vec<String> {
+    try_find().unwrap_or_default()
 }
 
 struct Ignored;

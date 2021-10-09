@@ -8,7 +8,7 @@ use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, rustflags, Expected, Runner, Test};
-use std::collections::BTreeMap as Map;
+use std::collections::{BTreeMap as Map, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -24,7 +24,7 @@ pub struct Project {
     update: Update,
     pub has_pass: bool,
     has_compile_fail: bool,
-    pub features: Option<Vec<String>>,
+    pub features: Vec<String>,
     pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
@@ -98,8 +98,6 @@ impl Runner {
             .ok_or(Error::ProjectDir)?;
         let source_manifest = dependencies::get_manifest(&source_dir);
 
-        let mut features = features::find();
-
         let path_dependencies = source_manifest
             .dependencies
             .iter()
@@ -130,9 +128,17 @@ impl Runner {
             source_manifest,
         );
 
-        if let Some(enabled_features) = &mut features {
-            enabled_features.retain(|feature| manifest.features.contains_key(feature));
+        let mut all_feature = HashSet::<String>::new();
+        for feature in self.features.clone().into_iter() {
+            all_feature.insert(feature);
         }
+        for feature in features::find() {
+            all_feature.insert(feature);
+        }
+        let features = all_feature
+            .into_iter()
+            .filter(|feature| manifest.features.contains_key(feature))
+            .collect();
 
         Ok(Project {
             dir: project_dir,

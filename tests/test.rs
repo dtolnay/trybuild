@@ -19,4 +19,13 @@ fn test() {
     t.pass("tests/ui/run-pass-9.rs");
     t.compile_fail("tests/ui/compile-fail-2.rs");
     t.compile_fail("tests/ui/compile-fail-3.rs");
+
+    let feature_a_test = trybuild::TestCases::new().features("a");
+    feature_a_test.pass("tests/ui/run-feature-pass.rs");
+
+    let feature_b_test = trybuild::TestCases::new().features("b");
+    feature_b_test.pass("tests/ui/run-feature-fail.rs");
+
+    let feature_a_and_b_test = trybuild::TestCases::new().features("a,b");
+    feature_a_and_b_test.pass("tests/ui/run-feature-fail.rs");
 }
