@@ -316,13 +316,19 @@ fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> Str
     let line_lower = line.to_ascii_lowercase().replace('\\', "/");
     let pattern_lower = pattern.to_ascii_lowercase().replace('\\', "/");
     let mut replaced = String::with_capacity(line.len());
-    for (i, keep) in line_lower.split(&pattern_lower).enumerate() {
-        if i > 0 {
+
+    let line_lower = line_lower.as_str();
+    let mut split = line_lower.split(&pattern_lower);
+    let mut pos = 0;
+    while let Some(keep) = split.next() {
+        if !replaced.is_empty() {
             replaced.push_str(replacement);
+            pos += pattern.len();
         }
-        let begin = replaced.len() - i * replacement.len() + i * pattern.len();
-        let end = begin + keep.len();
-        replaced.push_str(&line[begin..end]);
+        let keep = &line[pos..pos + keep.len()];
+        replaced.push_str(keep);
+        pos += keep.len();
     }
+
     replaced
 }
