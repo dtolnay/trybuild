@@ -320,14 +320,24 @@ fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> Str
     let line_lower = line_lower.as_str();
     let mut split = line_lower.split(&pattern_lower);
     let mut pos = 0;
+    let mut insert_replacement = false;
     while let Some(keep) = split.next() {
-        if !replaced.is_empty() {
+        if insert_replacement {
             replaced.push_str(replacement);
             pos += pattern.len();
         }
         let keep = &line[pos..pos + keep.len()];
         replaced.push_str(keep);
         pos += keep.len();
+        insert_replacement = true;
+        if replaced.ends_with(|ch: char| ch.is_ascii_alphanumeric()) {
+            if let Some(ch) = line[pos..].chars().next() {
+                replaced.push(ch);
+                pos += ch.len_utf8();
+                split = line_lower[pos..].split(&pattern_lower);
+                insert_replacement = false;
+            }
+        }
     }
 
     replaced
