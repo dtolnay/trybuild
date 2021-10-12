@@ -2,13 +2,13 @@ use crate::directory::Directory;
 use crate::run::PathDependency;
 
 macro_rules! test_normalize {
-    ($name:ident $original:literal $expected:literal) => {
+    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $original:literal $expected:literal) => {
         #[test]
         fn $name() {
             let context = super::Context {
                 krate: "trybuild000",
-                source_dir: &Directory::new("/git/trybuild/test_suite"),
-                workspace: &Directory::new("/git/trybuild"),
+                source_dir: &Directory::new({ "/git/trybuild/test_suite" $(; $dir)? }),
+                workspace: &Directory::new({ "/git/trybuild" $(; $workspace)? }),
                 path_dependencies: &[PathDependency {
                     name: String::from("diesel"),
                     normalized_path: Directory::new("/home/user/documents/rust/diesel/diesel"),
@@ -247,4 +247,25 @@ note: the following traits must be implemented
     | | }
     | |_^
     = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
+"}
+
+test_normalize! {test_pyo3_url
+    DIR="/pyo3"
+    WORKSPACE="/pyo3"
+"
+error: `async fn` is not yet supported for Python functions.
+
+Additional crates such as `pyo3-asyncio` can be used to integrate async Rust and Python. For more information, see https://github.com/PyO3/pyo3/issues/1632
+  --> tests/ui/invalid_pyfunctions.rs:10:1
+   |
+10 | async fn async_function() {}
+   | ^^^^^
+" "
+error: `async fn` is not yet supported for Python functions.
+
+Additional crates such as `pyo3-asyncio` can be used to integrate async Rust and Python. For more information, see https://github.com/PyO3/pyo3/issues/1632
+  --> tests/ui/invalid_pyfunctions.rs:10:1
+   |
+10 | async fn async_function() {}
+   | ^^^^^
 "}
