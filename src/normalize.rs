@@ -58,6 +58,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         CargoRegistry,
         ArrowOtherCrate,
         RelativeToDir,
+        LinesOutsideInputFile,
     ]
     .iter()
     .map(|normalization| apply(&from_bytes, *normalization, context))
@@ -95,6 +96,7 @@ enum Normalization {
     CargoRegistry,
     ArrowOtherCrate,
     RelativeToDir,
+    LinesOutsideInputFile,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -166,24 +168,43 @@ impl<'a> Filter<'a> {
                 .to_string_lossy()
                 .to_ascii_lowercase()
                 .replace('\\', "/");
+            let mut other_crate = false;
             if let Some(i) = line_lower.find(&source_dir_pat) {
                 if self.normalization >= RelativeToDir && i == indent + 4 {
                     line.replace_range(i..i + source_dir_pat.len(), "");
+                    if self.normalization < LinesOutsideInputFile {
+                        return Some(line);
+                    }
+                    let input_file_pat = self
+                        .context
+                        .input_file
+                        .to_string_lossy()
+                        .to_ascii_lowercase()
+                        .replace('\\', "/");
+                    if line_lower[i + source_dir_pat.len()..].starts_with(&input_file_pat) {
+                        // Keep line numbers only within the input file (the
+                        // path passed to our `fn compile_fail`. All other
+                        // source files get line numbers erased below.
+                        return Some(line);
+                    }
                 } else {
                     line.replace_range(i..i + source_dir_pat.len() - 1, "$DIR");
+                    if self.normalization < LinesOutsideInputFile {
+                        return Some(line);
+                    }
                 }
-                return Some(line);
-            }
-            let mut other_crate = false;
-            let workspace_pat = self
-                .context
-                .workspace
-                .to_string_lossy()
-                .to_ascii_lowercase()
-                .replace('\\', "/");
-            if let Some(i) = line_lower.find(&workspace_pat) {
-                line.replace_range(i..i + workspace_pat.len() - 1, "$WORKSPACE");
                 other_crate = true;
+            } else {
+                let workspace_pat = self
+                    .context
+                    .workspace
+                    .to_string_lossy()
+                    .to_ascii_lowercase()
+                    .replace('\\', "/");
+                if let Some(i) = line_lower.find(&workspace_pat) {
+                    line.replace_range(i..i + workspace_pat.len() - 1, "$WORKSPACE");
+                    other_crate = true;
+                }
             }
             if self.normalization >= PathDependencies && !other_crate {
                 for path_dep in self.context.path_dependencies {

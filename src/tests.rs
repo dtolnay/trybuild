@@ -272,7 +272,6 @@ Additional crates such as `pyo3-asyncio` can be used to integrate async Rust and
    | ^^^^^
 "}
 
-// FIXME: should strip the line numbers on src/handler.rs
 test_normalize! {test_dropshot_required_by
     DIR="/git/dropshot/dropshot"
     WORKSPACE="/git/dropshot"
@@ -297,8 +296,8 @@ error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfi
     |              ^^^^^^^^^^^^^^^^^^ the trait `schemars::JsonSchema` is not implemented for `QueryParams`
     |
 note: required by a bound in `dropshot::Query`
-   --> src/handler.rs:547:48
+   --> src/handler.rs
     |
-547 | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
+    | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
     |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
 "}
