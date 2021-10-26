@@ -292,7 +292,10 @@ note: required by a bound in `dropshot::Query`
     |
 547 | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
     |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
-" "
+"
+// TODO: it would be nice to also unindent the column of `|` by one column.
+// https://github.com/dtolnay/trybuild/issues/86
+"
 error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
    --> tests/fail/bad_endpoint4.rs:24:14
     |
