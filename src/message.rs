@@ -51,14 +51,7 @@ pub(crate) fn ok() {
 }
 
 pub(crate) fn begin_test(test: &Test, show_expected: bool) {
-    let display_name = if show_expected {
-        test.path
-            .file_name()
-            .unwrap_or_else(|| test.path.as_os_str())
-            .to_string_lossy()
-    } else {
-        test.path.as_os_str().to_string_lossy()
-    };
+    let display_name = test.path.as_os_str().to_string_lossy();
 
     print!("test ");
     term::bold();
