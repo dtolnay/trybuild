@@ -1,12 +1,14 @@
 use crate::directory::Directory;
 use crate::run::PathDependency;
+use std::path::Path;
 
 macro_rules! test_normalize {
-    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $original:literal $expected:literal) => {
+    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $(INPUT=$input:literal)? $original:literal $expected:literal) => {
         #[test]
         fn $name() {
             let context = super::Context {
                 krate: "trybuild000",
+                input_file: Path::new({ "tests/ui/error.rs" $(; $input)? }),
                 source_dir: &Directory::new({ "/git/trybuild/test_suite" $(; $dir)? }),
                 workspace: &Directory::new({ "/git/trybuild" $(; $workspace)? }),
                 path_dependencies: &[PathDependency {
@@ -54,7 +56,9 @@ error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not 
    --> tests/ui/error.rs:22:61
 "}
 
-test_normalize! {test_rust_lib "
+test_normalize! {test_rust_lib
+    INPUT="tests/ui/not-repeatable.rs"
+"
 error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
   --> /git/trybuild/test_suite/tests/ui/not-repeatable.rs:6:13
    |
@@ -84,7 +88,9 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 "}
 
-test_normalize! {test_type_dir_backslash "
+test_normalize! {test_type_dir_backslash
+    INPUT="tests/ui/compile-fail-3.rs"
+"
 error[E0277]: `*mut _` cannot be shared between threads safely
    --> /git/trybuild/test_suite/tests/ui/compile-fail-3.rs:7:5
     |
@@ -268,4 +274,37 @@ Additional crates such as `pyo3-asyncio` can be used to integrate async Rust and
    |
 10 | async fn async_function() {}
    | ^^^^^
+"}
+
+test_normalize! {test_dropshot_required_by
+    DIR="/git/dropshot/dropshot"
+    WORKSPACE="/git/dropshot"
+    INPUT="tests/fail/bad_endpoint4.rs"
+"
+error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
+   --> /git/dropshot/dropshot/tests/fail/bad_endpoint4.rs:24:14
+    |
+24  |     _params: Query<QueryParams>,
+    |              ^^^^^^^^^^^^^^^^^^ the trait `schemars::JsonSchema` is not implemented for `QueryParams`
+    |
+note: required by a bound in `dropshot::Query`
+   --> /git/dropshot/dropshot/src/handler.rs:547:48
+    |
+547 | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
+    |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
+"
+// TODO: it would be nice to also unindent the column of `|` by one column.
+// https://github.com/dtolnay/trybuild/issues/86
+"
+error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
+   --> tests/fail/bad_endpoint4.rs:24:14
+    |
+24  |     _params: Query<QueryParams>,
+    |              ^^^^^^^^^^^^^^^^^^ the trait `schemars::JsonSchema` is not implemented for `QueryParams`
+    |
+note: required by a bound in `dropshot::Query`
+   --> src/handler.rs
+    |
+    | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
+    |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
 "}
