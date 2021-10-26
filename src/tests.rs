@@ -8,7 +8,7 @@ macro_rules! test_normalize {
         fn $name() {
             let context = super::Context {
                 krate: "trybuild000",
-                input_file: Path::new({ "tests/ui/input.rs" $(; $input)? }),
+                input_file: Path::new({ "tests/ui/error.rs" $(; $input)? }),
                 source_dir: &Directory::new({ "/git/trybuild/test_suite" $(; $dir)? }),
                 workspace: &Directory::new({ "/git/trybuild" $(; $workspace)? }),
                 path_dependencies: &[PathDependency {
@@ -56,7 +56,9 @@ error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not 
    --> tests/ui/error.rs:22:61
 "}
 
-test_normalize! {test_rust_lib "
+test_normalize! {test_rust_lib
+    INPUT="tests/ui/not-repeatable.rs"
+"
 error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
   --> /git/trybuild/test_suite/tests/ui/not-repeatable.rs:6:13
    |
@@ -86,7 +88,9 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 "}
 
-test_normalize! {test_type_dir_backslash "
+test_normalize! {test_type_dir_backslash
+    INPUT="tests/ui/compile-fail-3.rs"
+"
 error[E0277]: `*mut _` cannot be shared between threads safely
    --> /git/trybuild/test_suite/tests/ui/compile-fail-3.rs:7:5
     |
