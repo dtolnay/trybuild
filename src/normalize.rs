@@ -4,12 +4,14 @@ mod tests;
 
 use crate::directory::Directory;
 use crate::run::PathDependency;
+use std::path::Path;
 
 #[derive(Copy, Clone)]
 pub struct Context<'a> {
     pub krate: &'a str,
     pub source_dir: &'a Directory,
     pub workspace: &'a Directory,
+    pub input_file: &'a Path,
     pub path_dependencies: &'a [PathDependency],
 }
 

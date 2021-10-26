@@ -1,12 +1,14 @@
 use crate::directory::Directory;
 use crate::run::PathDependency;
+use std::path::Path;
 
 macro_rules! test_normalize {
-    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $original:literal $expected:literal) => {
+    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $(INPUT=$input:literal)? $original:literal $expected:literal) => {
         #[test]
         fn $name() {
             let context = super::Context {
                 krate: "trybuild000",
+                input_file: Path::new({ "tests/ui/input.rs" $(; $input)? }),
                 source_dir: &Directory::new({ "/git/trybuild/test_suite" $(; $dir)? }),
                 workspace: &Directory::new({ "/git/trybuild" $(; $workspace)? }),
                 path_dependencies: &[PathDependency {
@@ -274,6 +276,7 @@ Additional crates such as `pyo3-asyncio` can be used to integrate async Rust and
 test_normalize! {test_dropshot_required_by
     DIR="/git/dropshot/dropshot"
     WORKSPACE="/git/dropshot"
+    INPUT="tests/fail/bad_endpoint4.rs"
 "
 error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
    --> /git/dropshot/dropshot/tests/fail/bad_endpoint4.rs:24:14

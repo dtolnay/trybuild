@@ -267,6 +267,7 @@ impl Test {
                 krate: &name.0,
                 source_dir: &project.source_dir,
                 workspace: &project.workspace,
+                input_file: &self.path,
                 path_dependencies: &project.path_dependencies,
             },
         );
