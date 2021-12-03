@@ -268,6 +268,7 @@ impl Test {
                 source_dir: &project.source_dir,
                 workspace: &project.workspace,
                 input_file: &self.path,
+                target_dir: &project.target_dir,
                 path_dependencies: &project.path_dependencies,
             },
         );
