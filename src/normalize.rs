@@ -12,6 +12,7 @@ pub struct Context<'a> {
     pub source_dir: &'a Directory,
     pub workspace: &'a Directory,
     pub input_file: &'a Path,
+    pub target_dir: &'a Directory,
     pub path_dependencies: &'a [PathDependency],
 }
 
@@ -162,6 +163,12 @@ impl<'a> Filter<'a> {
         if let Some(prefix) = prefix {
             line = line.replace('\\', "/");
             let line_lower = line.to_ascii_lowercase();
+            let target_dir_pat = self
+                .context
+                .target_dir
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .replace('\\', "/");
             let source_dir_pat = self
                 .context
                 .source_dir
@@ -169,7 +176,32 @@ impl<'a> Filter<'a> {
                 .to_ascii_lowercase()
                 .replace('\\', "/");
             let mut other_crate = false;
-            if let Some(i) = line_lower.find(&source_dir_pat) {
+            if line_lower.find(&target_dir_pat) == Some(indent + 4) {
+                let mut offset = indent + 4 + target_dir_pat.len();
+                let mut out_dir_crate_name = None;
+                while let Some(slash) = line[offset..].find('/') {
+                    let component = &line[offset..offset + slash];
+                    if component == "out" {
+                        if let Some(out_dir_crate_name) = out_dir_crate_name {
+                            let replacement = format!("$OUT_DIR[{}]", out_dir_crate_name);
+                            line.replace_range(indent + 4..offset + 3, &replacement);
+                            other_crate = true;
+                            break;
+                        }
+                    } else if component.len() > 17
+                        && component.rfind('-') == Some(component.len() - 17)
+                        && component[component.len() - 16..].bytes().all(|b| match b {
+                            b'0'..=b'9' | b'a'..=b'f' => true,
+                            _ => false,
+                        })
+                    {
+                        out_dir_crate_name = Some(&component[..component.len() - 17]);
+                    } else {
+                        out_dir_crate_name = None;
+                    }
+                    offset += slash + 1;
+                }
+            } else if let Some(i) = line_lower.find(&source_dir_pat) {
                 if self.normalization >= RelativeToDir && i == indent + 4 {
                     line.replace_range(i..i + source_dir_pat.len(), "");
                     if self.normalization < LinesOutsideInputFile {

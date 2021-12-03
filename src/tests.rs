@@ -3,7 +3,15 @@ use crate::run::PathDependency;
 use std::path::Path;
 
 macro_rules! test_normalize {
-    ($name:ident $(DIR=$dir:literal)? $(WORKSPACE=$workspace:literal)? $(INPUT=$input:literal)? $original:literal $expected:literal) => {
+    (
+        $name:ident
+        $(DIR=$dir:literal)?
+        $(WORKSPACE=$workspace:literal)?
+        $(INPUT=$input:literal)?
+        $(TARGET=$target:literal)?
+        $original:literal
+        $expected:literal
+    ) => {
         #[test]
         fn $name() {
             let context = super::Context {
@@ -11,6 +19,7 @@ macro_rules! test_normalize {
                 input_file: Path::new({ "tests/ui/error.rs" $(; $input)? }),
                 source_dir: &Directory::new({ "/git/trybuild/test_suite" $(; $dir)? }),
                 workspace: &Directory::new({ "/git/trybuild" $(; $workspace)? }),
+                target_dir: &Directory::new({ "/git/trybuild/target" $(; $target)? }),
                 path_dependencies: &[PathDependency {
                     name: String::from("diesel"),
                     normalized_path: Directory::new("/home/user/documents/rust/diesel/diesel"),
@@ -312,6 +321,7 @@ note: required by a bound in `dropshot::Query`
 test_normalize! {test_uniffi_out_dir
     DIR="/git/uniffi-rs/fixtures/uitests"
     WORKSPACE="/git/uniffi-rs"
+    TARGET="/git/uniffi-rs/target"
 "
 error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
    --> /git/uniffi-rs/target/debug/build/uniffi_uitests-1a51d46aecb559a7/out/counter.uniffi.rs:160:19
@@ -324,7 +334,7 @@ error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
     = note: required by `try_lift`
 " "
 error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
-   --> $WORKSPACE/target/debug/build/uniffi_uitests-1a51d46aecb559a7/out/counter.uniffi.rs
+   --> $OUT_DIR[uniffi_uitests]/counter.uniffi.rs
     |
     |             match <std::sync::Arc<Counter> as uniffi::FfiConverter>::try_lift(ptr) {
     |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `FfiConverter` is not implemented for `Arc<Counter>`
