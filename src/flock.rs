@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -7,9 +7,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-lazy_static! {
-    static ref LOCK: Mutex<()> = Mutex::new(());
-}
+static LOCK: OnceCell<Mutex<()>> = OnceCell::new();
 
 pub struct Lock {
     intraprocess_guard: Guard,
@@ -44,7 +42,11 @@ impl Lock {
 
 impl Guard {
     fn acquire() -> Self {
-        Guard::Locked(LOCK.lock().unwrap_or_else(PoisonError::into_inner))
+        Guard::Locked(
+            LOCK.get_or_init(|| Mutex::new(()))
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        )
     }
 }
 
