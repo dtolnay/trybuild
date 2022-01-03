@@ -1,14 +1,14 @@
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 use std::io::{Result, Write};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream as Stream, WriteColor};
 
-lazy_static! {
-    static ref TERM: Mutex<Term> = Mutex::new(Term::new());
-}
+static TERM: OnceCell<Mutex<Term>> = OnceCell::new();
 
 pub fn lock() -> MutexGuard<'static, Term> {
-    TERM.lock().unwrap_or_else(PoisonError::into_inner)
+    TERM.get_or_init(|| Mutex::new(Term::new()))
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
 }
 
 pub fn bold() {
