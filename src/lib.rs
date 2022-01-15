@@ -213,6 +213,7 @@
     clippy::default_trait_access,
     clippy::doc_markdown,
     clippy::enum_glob_use,
+    clippy::iter_not_returning_iterator, // https://github.com/rust-lang/rust-clippy/issues/8285
     clippy::let_underscore_drop,
     clippy::manual_assert,
     clippy::manual_range_contains,
