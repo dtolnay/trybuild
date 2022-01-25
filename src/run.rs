@@ -178,10 +178,14 @@ impl Runner {
 
         let features = source_manifest
             .features
-            .keys()
-            .map(|feature| {
-                let enable = format!("{}/{}", crate_name, feature);
-                (feature.clone(), vec![enable])
+            .iter()
+            .map(|(feature_key, additional) | {
+                let enable_self = format!("{}/{}", crate_name, feature_key);
+
+                let mut enable_additional = vec![enable_self];
+                enable_additional.extend_from_slice(&additional);
+
+                (feature_key.clone(), enable_additional)
             })
             .collect();
 
