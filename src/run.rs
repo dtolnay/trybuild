@@ -190,6 +190,7 @@ impl Runner {
                 name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
                 edition: source_manifest.package.edition,
+                resolver: source_manifest.package.resolver,
                 publish: false,
             },
             features,

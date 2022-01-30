@@ -27,6 +27,8 @@ pub struct Package {
     pub name: String,
     pub version: String,
     pub edition: Edition,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolver: Option<String>,
     pub publish: bool,
 }
 
