@@ -343,3 +343,23 @@ error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
               <Arc<T> as FfiConverter>
     = note: required by `try_lift`
 "}
+
+test_normalize! {test_proc_macro_panic
+    DIR="D:\\repro"
+    INPUT="tests\\ui\\nonzero_fail.rs"
+"
+error[E0080]: evaluation of constant value failed
+ --> D:\\repro\\tests\\ui\\nonzero_fail.rs:7:10
+  |
+7 | #[derive(NonZeroRepr)]
+  |          ^^^^^^^^^^^ the evaluated program panicked at 'expected non-zero discriminant expression', D:\\repro\\tests\\ui\\nonzero_fail.rs:7:10
+"
+// FIXME: the backslashes in the following are supposed to get normalized.
+// https://github.com/dtolnay/trybuild/issues/147
+"
+error[E0080]: evaluation of constant value failed
+ --> tests/ui/nonzero_fail.rs:7:10
+  |
+7 | #[derive(NonZeroRepr)]
+  |          ^^^^^^^^^^^ the evaluated program panicked at 'expected non-zero discriminant expression', $DIR/tests\\ui\\nonzero_fail.rs:7:10
+"}
