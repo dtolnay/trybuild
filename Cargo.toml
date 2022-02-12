@@ -1,6 +1,6 @@
 [package]
 name = "trybuild"
-version = "1.0.55"
+version = "1.0.56"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 rust-version = "1.36"
