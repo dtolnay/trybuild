@@ -381,7 +381,13 @@ fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> Str
             replaced.push_str(replacement);
             pos += pattern.len();
         }
-        let keep = &line[pos..pos + keep.len()];
+        let mut keep = &line[pos..pos + keep.len()];
+        if insert_replacement {
+            let end_of_maybe_path = keep.find([' ', ':'].as_slice()).unwrap_or(keep.len());
+            replaced.push_str(&keep[..end_of_maybe_path].replace('\\', "/"));
+            pos += end_of_maybe_path;
+            keep = &keep[end_of_maybe_path..];
+        }
         replaced.push_str(keep);
         pos += keep.len();
         insert_replacement = true;
