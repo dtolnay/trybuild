@@ -19,4 +19,10 @@ fn test() {
     t.pass("tests/ui/run-pass-9.rs");
     t.compile_fail("tests/ui/compile-fail-2.rs");
     t.compile_fail("tests/ui/compile-fail-3.rs");
+    t.pass_inline("inline_pass_main", "fn main() {}");
+    t.compile_fail_inline(
+        "inline_compile_fail",
+        "fn main() { compile_error!(\"ERROR\"); }",
+        "tests/ui/inline_compile_fail.stderr",
+    );
 }

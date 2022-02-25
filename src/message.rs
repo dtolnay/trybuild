@@ -51,7 +51,7 @@ pub(crate) fn ok() {
 }
 
 pub(crate) fn begin_test(test: &Test, show_expected: bool) {
-    let display_name = test.path.as_os_str().to_string_lossy();
+    let display_name = test.path().as_os_str().to_string_lossy();
 
     print!("test ");
     term::bold();
@@ -59,7 +59,7 @@ pub(crate) fn begin_test(test: &Test, show_expected: bool) {
     term::reset();
 
     if show_expected {
-        match test.expected {
+        match test.expected() {
             Expected::Pass => print!(" [should pass]"),
             Expected::CompileFail => print!(" [should fail to compile]"),
         }
