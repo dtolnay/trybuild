@@ -91,7 +91,7 @@ impl Runner {
             match e.test.expected {
                 Expected::Pass => has_pass = true,
                 Expected::CompileFailSubString(_) | Expected::CompileFail => {
-                    has_compile_fail = true
+                    has_compile_fail = true;
                 }
             }
         }
@@ -169,6 +169,7 @@ impl Runner {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn make_manifest(
         &self,
         crate_name: String,
@@ -267,7 +268,7 @@ impl Test {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
         match self.inner {
-            TestKind::File(FileTest { ref path }) => check_exists(&path)?,
+            TestKind::File(FileTest { ref path }) => check_exists(path)?,
             TestKind::Inline(ref t) => create_inline_test(t, project)?,
         };
 
@@ -280,7 +281,7 @@ impl Test {
                 krate: &name.0,
                 source_dir: &project.source_dir,
                 workspace: &project.workspace,
-                input_file: &self.path(),
+                input_file: self.path(),
                 target_dir: &project.target_dir,
                 path_dependencies: &project.path_dependencies,
             },
@@ -292,7 +293,7 @@ impl Test {
                 Test::check_compile_fail(self, project, name, success, stdout, stderr)
             }
             Expected::CompileFailSubString(ref s) => {
-                Test::check_compile_fail_sub_str(self, name, success, stdout, stderr, &s)
+                Test::check_compile_fail_sub_str(self, name, success, stdout, stderr, s)
             }
         }
     }
@@ -405,7 +406,7 @@ fn check_success(success: bool, build_stdout: &[u8], variations: &Variations) ->
 
     if success {
         message::should_not_have_compiled();
-        message::fail_output(Fail, &build_stdout);
+        message::fail_output(Fail, build_stdout);
         message::warnings(preferred);
         Err(Error::ShouldNotHaveCompiled)
     } else {

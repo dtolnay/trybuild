@@ -309,8 +309,8 @@ impl Test {
 
     fn path(&self) -> &PathBuf {
         match self.inner {
-            TestKind::File(FileTest { ref path, .. }) => path,
-            TestKind::Inline(InlineTest { ref path, .. }) => path,
+            TestKind::File(FileTest { ref path, .. })
+            | TestKind::Inline(InlineTest { ref path, .. }) => path,
         }
     }
 }
