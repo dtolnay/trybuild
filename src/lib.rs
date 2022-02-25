@@ -265,32 +265,35 @@ struct Runner {
 }
 
 #[derive(Clone, Debug)]
-enum Test {
+struct Test {
+    expected: Expected,
+    inner: TestKind,
+}
+
+#[derive(Clone, Debug)]
+enum TestKind {
     File(FileTest),
     Inline(InlineTest),
 }
 
 impl Test {
-    fn stderr_path(&self) -> PathBuf {
-        match self {
-            Test::Inline(InlineTest { stderr_path, .. }) => {
-                stderr_path.clone().expect("not a compile fail test")
-            }
-            Test::File(FileTest { path, ..}) => path.with_extension("stderr"),
-        }
+    fn is_inline(&self) -> bool {
+        matches!(self.inner, TestKind::Inline(_))
     }
 
-    fn expected(&self) -> Expected {
-        match *self {
-            Test::File(FileTest { expected, .. }) => expected,
-            Test::Inline(InlineTest { expected, .. }) => expected,
+    fn stderr_path(&self) -> PathBuf {
+        match self.inner {
+            TestKind::Inline(InlineTest {
+                ref stderr_path, ..
+            }) => stderr_path.clone().expect("not a compile fail test"),
+            TestKind::File(FileTest { ref path, .. }) => path.with_extension("stderr"),
         }
     }
 
     fn path(&self) -> &PathBuf {
-        match *self {
-            Test::File(FileTest { ref path, .. }) => path,
-            Test::Inline(InlineTest { ref path, .. }) => path,
+        match self.inner {
+            TestKind::File(FileTest { ref path, .. }) => path,
+            TestKind::Inline(InlineTest { ref path, .. }) => path,
         }
     }
 }
@@ -298,22 +301,21 @@ impl Test {
 #[derive(Clone, Debug)]
 struct FileTest {
     path: PathBuf,
-    expected: Expected,
 }
 
 #[derive(Clone, Debug)]
 struct InlineTest {
     code: String,
     name: String,
-    expected: Expected,
     path: PathBuf,
     stderr_path: Option<PathBuf>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 enum Expected {
     Pass,
     CompileFail,
+    CompileFailSubString(String),
 }
 
 impl TestCases {
@@ -325,37 +327,66 @@ impl TestCases {
     }
 
     pub fn pass<P: AsRef<Path>>(&self, path: P) {
-        self.runner.borrow_mut().tests.push(Test::File(FileTest {
-            path: path.as_ref().to_owned(),
+        self.runner.borrow_mut().tests.push(Test {
             expected: Expected::Pass,
-        }));
+            inner: TestKind::File(FileTest {
+                path: path.as_ref().to_owned(),
+            }),
+        });
     }
 
     pub fn pass_inline(&self, name: &str, code: &str) {
-        self.runner.borrow_mut().tests.push(Test::Inline(InlineTest {
-            code: code.to_owned(),
-            name: name.to_owned(),
-            path: PathBuf::from(name),
+        self.runner.borrow_mut().tests.push(Test {
             expected: Expected::Pass,
-            stderr_path: None,
-        }));
+            inner: TestKind::Inline(InlineTest {
+                code: code.to_owned(),
+                name: name.to_owned(),
+                path: PathBuf::from(name),
+                stderr_path: None,
+            }),
+        });
     }
 
     pub fn compile_fail<P: AsRef<Path>>(&self, path: P) {
-        self.runner.borrow_mut().tests.push(Test::File(FileTest {
-            path: path.as_ref().to_owned(),
+        self.runner.borrow_mut().tests.push(Test {
             expected: Expected::CompileFail,
-        }));
+            inner: TestKind::File(FileTest {
+                path: path.as_ref().to_owned(),
+            }),
+        });
     }
 
     pub fn compile_fail_inline<P: AsRef<Path>>(&self, name: &str, code: &str, stderr_path: P) {
-        self.runner.borrow_mut().tests.push(Test::Inline(InlineTest {
-            code: code.to_owned(),
-            name: name.to_owned(),
-            path: PathBuf::from(name),
+        self.runner.borrow_mut().tests.push(Test {
             expected: Expected::CompileFail,
-            stderr_path: Some(stderr_path.as_ref().to_owned()),
-        }));
+            inner: TestKind::Inline(InlineTest {
+                code: code.to_owned(),
+                name: name.to_owned(),
+                path: PathBuf::from(name),
+                stderr_path: Some(stderr_path.as_ref().to_owned()),
+            }),
+        });
+    }
+
+    pub fn compile_fail_check_sub<P: AsRef<Path>>(&self, path: P, sub_string: &str) {
+        self.runner.borrow_mut().tests.push(Test {
+            expected: Expected::CompileFailSubString(sub_string.to_owned()),
+            inner: TestKind::File(FileTest {
+                path: path.as_ref().to_owned(),
+            }),
+        });
+    }
+
+    pub fn compile_fail_inline_check_sub(&self, name: &str, code: &str, sub_string: &str) {
+        self.runner.borrow_mut().tests.push(Test {
+            expected: Expected::CompileFailSubString(sub_string.to_owned()),
+            inner: TestKind::Inline(InlineTest {
+                code: code.to_owned(),
+                name: name.to_owned(),
+                path: PathBuf::from(name),
+                stderr_path: None,
+            }),
+        });
     }
 }
 
