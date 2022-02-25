@@ -1,6 +1,6 @@
 #[test]
 fn test() {
-    let t = trybuild::TestCases::new();
+    let t = trybuild2::TestCases::new();
     t.pass("tests/ui/run-pass-0.rs");
     t.pass("tests/ui/print-stdout.rs");
     t.pass("tests/ui/run-pass-1.rs");

@@ -140,7 +140,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str, extra_str: &str) {
     print!("actual output");
     term::reset();
     println!(" is the correct output you can bless it by rerunning");
-    println!("      your test with the environment variable TRYBUILD=overwrite");
+    println!("      your test with the environment variable TRYBUILD2=overwrite");
     println!();
 }
 
