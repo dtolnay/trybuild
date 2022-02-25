@@ -71,7 +71,7 @@ impl Runner {
 
         print!("\n\n");
 
-        if failures > 0 && project.name != "trybuild-tests" {
+        if failures > 0 && project.name != "trybuild2-tests" {
             panic!("{} of {} tests failed", failures, len);
         }
     }
@@ -452,7 +452,7 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     }
 
     fn bin_name(i: usize) -> Name {
-        Name(format!("trybuild{:03}", i))
+        Name(format!("trybuild2{:03}", i))
     }
 
     let mut vec = Vec::new();
@@ -511,13 +511,13 @@ impl ExpandedTest {
     }
 }
 
-// Filter which test cases are run by trybuild.
+// Filter which test cases are run by trybuild2.
 //
-//     $ cargo test -- ui trybuild=tuple_structs.rs
+//     $ cargo test -- ui trybuild2=tuple_structs.rs
 //
-// The first argument after `--` must be the trybuild test name i.e. the name of
-// the function that has the #[test] attribute and calls trybuild. That's to get
-// Cargo to run the test at all. The next argument starting with `trybuild=`
+// The first argument after `--` must be the trybuild2 test name i.e. the name of
+// the function that has the #[test] attribute and calls trybuild2. That's to get
+// Cargo to run the test at all. The next argument starting with `trybuild2=`
 // provides a filename filter. Only test cases whose filename contains the
 // filter string will be run.
 #[allow(clippy::needless_collect)] // false positive https://github.com/rust-lang/rust-clippy/issues/5991
@@ -525,7 +525,7 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
     let filters = env::args_os()
         .flat_map(OsString::into_string)
         .filter_map(|mut arg| {
-            const PREFIX: &str = "trybuild=";
+            const PREFIX: &str = "trybuild2=";
             if arg.starts_with(PREFIX) && arg != PREFIX {
                 Some(arg.split_off(PREFIX.len()))
             } else {

@@ -15,7 +15,7 @@ impl Default for Update {
 
 impl Update {
     pub fn env() -> Result<Self> {
-        let var = match env::var_os("TRYBUILD") {
+        let var = match env::var_os("TRYBUILD2") {
             Some(var) => var,
             None => return Ok(Update::default()),
         };

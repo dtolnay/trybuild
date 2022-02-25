@@ -1,13 +1,13 @@
 [package]
-name = "trybuild"
-version = "1.0.56"
-authors = ["David Tolnay <dtolnay@gmail.com>"]
+name = "trybuild2"
+version = "1.0.0"
+authors = ["David Tolnay <dtolnay@gmail.com>", "Guillaume Gomez <guillaume1.gomez@gmail.com>"]
 edition = "2018"
 rust-version = "1.36"
 license = "MIT OR Apache-2.0"
-description = "Test harness for ui tests of compiler diagnostics"
-repository = "https://github.com/dtolnay/trybuild"
-documentation = "https://docs.rs/trybuild"
+description = "Test harness for ui tests of compiler diagnostics (with support for inline tests)"
+repository = "https://github.com/GuillaumeGomez/trybuild2"
+documentation = "https://docs.rs/trybuild2"
 exclude = ["screenshots/*"]
 readme = "README.md"
 
