@@ -59,9 +59,11 @@ pub(crate) fn begin_test(test: &Test, show_expected: bool) {
     term::reset();
 
     if show_expected {
-        match test.expected() {
+        match test.expected {
             Expected::Pass => print!(" [should pass]"),
-            Expected::CompileFail => print!(" [should fail to compile]"),
+            Expected::CompileFailSubString(_) | Expected::CompileFail => {
+                print!(" [should fail to compile]")
+            }
         }
     }
 
@@ -115,7 +117,7 @@ pub(crate) fn overwrite_stderr(stderr_path: &Path, stderr: &str) {
     println!();
 }
 
-pub(crate) fn mismatch(expected: &str, actual: &str) {
+pub(crate) fn mismatch(expected: &str, actual: &str, extra_str: &str) {
     term::bold_color(Red);
     println!("mismatch");
     term::reset();
@@ -127,7 +129,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
         Diff::compute(expected, actual)
     };
     term::bold_color(Blue);
-    println!("EXPECTED:");
+    println!("EXPECTED{}:", extra_str);
     snippet_diff(Blue, expected, diff.as_ref());
     println!();
     term::bold_color(Red);
