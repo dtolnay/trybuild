@@ -89,6 +89,8 @@
 //!     //t.pass("tests/06-make-work-in-function.rs");
 //!     //t.pass("tests/07-init-array.rs");
 //!     //t.compile_fail("tests/08-ident-span.rs");
+//!     t.compile_fail_inline("name", "fn main() {}", "path-to-stderr");
+//!     t.compile_fail_check_sub("tests/03-expand-four-errors.rs", "I want to find this!");
 //! }
 //! ```
 //!
@@ -207,6 +209,17 @@
 //! important for a test suite to catch. If the compiler changes something that
 //! makes error messages that we care about substantially worse, it is also
 //! important to catch and report as a compiler issue.
+//!
+//! # Inline checks
+//!
+//! It's possible to provide a code to compile directly through
+//! `compile_fail_inline` and `pass_inline`. It allows you to have some more
+//! generic checks which can be generated at runtime if needed.
+//!
+//! # Sub-string checks
+//!
+//! If you need  more control over the stderr check as well, you can take a
+//! look at `compile_fail_check_sub` and `compile_fail_inline_check_sub`.
 
 #![allow(
     clippy::collapsible_if,
