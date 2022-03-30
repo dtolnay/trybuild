@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
-use serde::Deserialize;
+use serde_derive::Deserialize;
 use std::process::{Command, Output, Stdio};
 use std::{env, fs};
 
