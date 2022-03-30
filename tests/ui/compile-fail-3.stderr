@@ -1,5 +1,5 @@
 error[E0277]: `*mut _` cannot be shared between threads safely
-   --> $DIR/compile-fail-3.rs:7:5
+   --> tests/ui/compile-fail-3.rs:7:5
     |
 7   |     thread::spawn(|| {
     |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
