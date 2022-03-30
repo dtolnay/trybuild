@@ -1,4 +1,5 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::de::{Deserialize, Deserializer};
+use serde_derive::Serialize;
 use std::borrow::Cow;
 use std::ffi::OsString;
 use std::io;

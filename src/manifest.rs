@@ -1,5 +1,5 @@
 use crate::dependencies::{Dependency, Patch, RegistryPatch, TargetDependencies};
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;
