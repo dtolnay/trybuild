@@ -80,6 +80,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .args(features(project))
         .arg("--quiet")
         .arg("--color=never")
+        .arg("--message-format=json")
         .output()
         .map_err(Error::Cargo)
 }
