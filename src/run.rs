@@ -8,12 +8,15 @@ use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, rustflags, Expected, Runner, Test};
+use serde_derive::Deserialize;
 use std::collections::BTreeMap as Map;
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::process::Output;
+use std::str;
 
 #[derive(Debug)]
 pub struct Project {
@@ -259,7 +262,8 @@ impl Test {
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
 
-        let output = cargo::build_test(project, name)?;
+        let mut output = cargo::build_test(project, name)?;
+        parse_cargo_json(&mut output);
         let success = output.status.success();
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
@@ -480,4 +484,56 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
             .iter()
             .any(|f| t.test.path.to_string_lossy().contains(f))
     });
+}
+
+#[derive(Deserialize)]
+struct CargoMessage {
+    #[allow(dead_code)]
+    reason: Reason,
+    message: RustcMessage,
+}
+
+#[derive(Deserialize)]
+enum Reason {
+    #[serde(rename = "compiler-message")]
+    CompilerMessage,
+}
+
+#[derive(Deserialize)]
+struct RustcMessage {
+    rendered: String,
+    level: String,
+}
+
+fn parse_cargo_json(output: &mut Output) {
+    let mut diagnostics = String::new();
+    let mut nonmessage_stdout = String::new();
+    let mut remaining = match str::from_utf8(&output.stdout) {
+        Ok(remaining) => remaining,
+        // TODO: this should be easy to support if someone needs it, just needs
+        // an alternative to `find` below.
+        Err(_) => return,
+    };
+    while !remaining.is_empty() {
+        let begin = match remaining.find("{\"reason\":") {
+            Some(begin) => begin,
+            None => break,
+        };
+        let (nonmessage, rest) = remaining.split_at(begin);
+        nonmessage_stdout.push_str(nonmessage);
+        let len = match rest.find('\n') {
+            Some(end) => end + 1,
+            None => rest.len(),
+        };
+        let (message, rest) = rest.split_at(len);
+        if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
+            if de.message.level != "failure-note" {
+                diagnostics.push_str(&de.message.rendered);
+            }
+        }
+        remaining = rest;
+    }
+    nonmessage_stdout.push_str(remaining);
+    output.stdout = Vec::from(nonmessage_stdout);
+    output.stderr = Vec::from(diagnostics);
 }
