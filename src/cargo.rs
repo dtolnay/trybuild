@@ -4,8 +4,9 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde_derive::Deserialize;
+use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, fs};
+use std::{env, fs, iter};
 
 #[derive(Deserialize)]
 pub struct Metadata {
@@ -29,13 +30,17 @@ fn raw_cargo() -> Command {
 fn cargo(project: &Project) -> Command {
     let mut cmd = raw_cargo();
     cmd.current_dir(&project.dir);
-    cmd.env(
+    cmd.envs(cargo_target_dir(project));
+    cmd.envs(rustflags::envs());
+    cmd.arg("--offline");
+    cmd
+}
+
+fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, PathBuf)> {
+    iter::once((
         "CARGO_TARGET_DIR",
         path!(project.target_dir / "tests" / "target"),
-    );
-    cmd.arg("--offline");
-    cmd.envs(rustflags::envs());
-    cmd
+    ))
 }
 
 pub fn build_dependencies(project: &Project) -> Result<()> {
