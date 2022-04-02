@@ -243,6 +243,7 @@ mod env;
 mod error;
 mod features;
 mod flock;
+mod fs;
 mod manifest;
 mod message;
 mod normalize;

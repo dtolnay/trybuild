@@ -43,6 +43,43 @@ fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, Pa
     ))
 }
 
+// Check if this Cargo contains https://github.com/rust-lang/cargo/pull/10383
+pub fn supports_keep_going(project: &Project) -> Result<bool> {
+    let scratch_dir = env!("OUT_DIR");
+    let dir = path!(scratch_dir / "keepgoing");
+    fs::create_dir_all(&dir)?;
+
+    let manifest_path = path!(dir / "Cargo.toml");
+    let cargo_toml = "\
+        [package]\n\
+        name = \"trybuild_keep_going\"\n\
+        version = \"0.0.0\"\n\
+        [[bin]]\n\
+        name = \"trybuild_keep_going\"\n\
+        path = \"main.rs\"\n\
+        [workspace]\n\
+    ";
+    crate::fs::write_if_needed(&manifest_path, cargo_toml)?;
+
+    let main_rs_path = path!(dir / "main.rs");
+    crate::fs::write_if_needed(main_rs_path, "fn main() {}\n")?;
+
+    let status = raw_cargo()
+        .envs(cargo_target_dir(project))
+        .envs(rustflags::envs())
+        .arg("-Zunstable-options")
+        .arg("check")
+        .args(target())
+        .arg("--manifest-path")
+        .arg(manifest_path)
+        .arg("--keep-going")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+
+    Ok(status.success())
+}
+
 pub fn build_dependencies(project: &Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {

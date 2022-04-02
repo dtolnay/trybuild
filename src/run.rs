@@ -31,6 +31,8 @@ pub struct Project {
     pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
+    #[allow(dead_code)]
+    keep_going: bool,
 }
 
 #[derive(Debug)]
@@ -137,7 +139,7 @@ impl Runner {
             enabled_features.retain(|feature| manifest.features.contains_key(feature));
         }
 
-        Ok(Project {
+        let mut project = Project {
             dir: project_dir,
             source_dir,
             target_dir,
@@ -149,7 +151,12 @@ impl Runner {
             workspace,
             path_dependencies,
             manifest,
-        })
+            keep_going: false,
+        };
+
+        project.keep_going = cargo::supports_keep_going(&project).unwrap_or(false);
+
+        Ok(project)
     }
 
     fn write(&self, project: &Project) -> Result<()> {
