@@ -43,7 +43,7 @@ fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, Pa
     ))
 }
 
-pub fn build_dependencies(project: &Project) -> Result<()> {
+pub fn build_dependencies(project: &mut Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {
         let _ = fs::copy(workspace_cargo_lock, path!(project.dir / "Cargo.lock"));
@@ -51,20 +51,30 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
         let _ = cargo(project).arg("generate-lockfile").status();
     }
 
-    let status = cargo(project)
+    let mut command = cargo(project);
+    command
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())
         .arg("--bin")
         .arg(&project.name)
-        .args(features(project))
-        .status()
-        .map_err(Error::Cargo)?;
+        .args(features(project));
 
-    if status.success() {
-        Ok(())
-    } else {
-        Err(Error::CargoFail)
+    let status = command.status().map_err(Error::Cargo)?;
+    if !status.success() {
+        return Err(Error::CargoFail);
     }
+
+    // Check if this Cargo contains https://github.com/rust-lang/cargo/pull/10383
+    project.keep_going = command
+        .arg("-Zunstable-options")
+        .arg("--keep-going")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+
+    Ok(())
 }
 
 pub fn build_test(project: &Project, name: &Name) -> Result<Output> {

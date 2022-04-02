@@ -31,6 +31,7 @@ pub struct Project {
     pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
+    pub keep_going: bool,
 }
 
 #[derive(Debug)]
@@ -45,9 +46,9 @@ impl Runner {
         filter(&mut tests);
 
         let (project, _lock) = (|| {
-            let project = self.prepare(&tests)?;
+            let mut project = self.prepare(&tests)?;
             let lock = Lock::acquire(path!(project.dir / ".lock"));
-            self.write(&project)?;
+            self.write(&mut project)?;
             Ok((project, lock))
         })()
         .unwrap_or_else(|err| {
@@ -149,10 +150,11 @@ impl Runner {
             workspace,
             path_dependencies,
             manifest,
+            keep_going: false,
         })
     }
 
-    fn write(&self, project: &Project) -> Result<()> {
+    fn write(&self, project: &mut Project) -> Result<()> {
         let manifest_toml = toml::to_string(&project.manifest)?;
 
         let config = self.make_config();
