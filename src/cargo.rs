@@ -34,7 +34,7 @@ fn cargo(project: &Project) -> Command {
         path!(project.target_dir / "tests" / "target"),
     );
     cmd.arg("--offline");
-    rustflags::set_env(&mut cmd);
+    cmd.envs(rustflags::envs());
     cmd
 }
 
