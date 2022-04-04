@@ -165,7 +165,7 @@ impl Runner {
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
         fs::write(
             path!(project.dir / "main.rs"),
-            b"#![allow(unused_crate_dependencies, missing_docs)]\nfn main() {}\n",
+            b"#![allow(unused_crate_dependencies, missing_docs)]\nfn main() {}\n".to_vec(),
         )?;
 
         cargo::build_dependencies(project)?;
