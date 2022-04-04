@@ -163,10 +163,15 @@ impl Runner {
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
         fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
-        fs::write(
-            path!(project.dir / "main.rs"),
-            b"#![allow(unused_crate_dependencies, missing_docs)]\nfn main() {}\n".to_vec(),
-        )?;
+
+        let main_rs = b"#![allow(\
+                unknown_lints, \
+                unused_crate_dependencies, \
+                missing_docs\
+            )]\n\
+            fn main() {}\n\
+        ";
+        fs::write(path!(project.dir / "main.rs"), main_rs.to_vec())?;
 
         cargo::build_dependencies(project)?;
 
