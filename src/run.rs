@@ -270,7 +270,8 @@ impl Test {
         check_exists(&self.path)?;
 
         let mut output = cargo::build_test(project, name)?;
-        parse_cargo_json(&mut output);
+        let src_path = project.source_dir.join(&self.path);
+        parse_cargo_json(&src_path, &mut output);
         let success = output.status.success();
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
@@ -497,6 +498,7 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
 struct CargoMessage {
     #[allow(dead_code)]
     reason: Reason,
+    target: RustcTarget,
     message: RustcMessage,
 }
 
@@ -507,12 +509,17 @@ enum Reason {
 }
 
 #[derive(Deserialize)]
+struct RustcTarget {
+    src_path: PathBuf,
+}
+
+#[derive(Deserialize)]
 struct RustcMessage {
     rendered: String,
     level: String,
 }
 
-fn parse_cargo_json(output: &mut Output) {
+fn parse_cargo_json(src_path: &Path, output: &mut Output) {
     let mut diagnostics = String::new();
     let mut nonmessage_stdout = String::new();
     let mut remaining = match str::from_utf8(&output.stdout) {
@@ -534,7 +541,7 @@ fn parse_cargo_json(output: &mut Output) {
         };
         let (message, rest) = rest.split_at(len);
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
-            if de.message.level != "failure-note" {
+            if de.message.level != "failure-note" && de.target.src_path == src_path {
                 diagnostics.push_str(&de.message.rendered);
             }
         }
