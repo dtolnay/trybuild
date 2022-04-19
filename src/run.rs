@@ -270,11 +270,12 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let src_path = project.source_dir.join(&self.path);
-        let output = parse_cargo_json(&src_path, &output.stdout);
-        let success = output.success;
-        let stdout = output.stdout;
+        let mut outputs = parse_cargo_json(&output.stdout);
+        let this_test = outputs.stderrs.remove(&src_path).unwrap_or_default();
+        let success = this_test.success;
+        let stdout = outputs.stdout;
         let stderr = normalize::diagnostics(
-            &output.stderr,
+            &this_test.stderr,
             Context {
                 krate: &name.0,
                 source_dir: &project.source_dir,
@@ -518,15 +519,27 @@ struct RustcMessage {
     level: String,
 }
 
-struct ParsedOutput {
-    success: bool,
+struct ParsedOutputs {
     stdout: String,
+    stderrs: Map<PathBuf, Stderr>,
+}
+
+struct Stderr {
+    success: bool,
     stderr: String,
 }
 
-fn parse_cargo_json(src_path: &Path, stdout: &[u8]) -> ParsedOutput {
-    let mut success = true;
-    let mut diagnostics = String::new();
+impl Default for Stderr {
+    fn default() -> Self {
+        Stderr {
+            success: true,
+            stderr: String::new(),
+        }
+    }
+}
+
+fn parse_cargo_json(stdout: &[u8]) -> ParsedOutputs {
+    let mut map = Map::new();
     let mut nonmessage_stdout = String::new();
     let mut remaining = &*String::from_utf8_lossy(stdout);
     while !remaining.is_empty() {
@@ -542,19 +555,21 @@ fn parse_cargo_json(src_path: &Path, stdout: &[u8]) -> ParsedOutput {
         };
         let (message, rest) = rest.split_at(len);
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
-            if de.message.level != "failure-note" && de.target.src_path == src_path {
+            if de.message.level != "failure-note" {
+                let mut entry = map
+                    .entry(de.target.src_path)
+                    .or_insert_with(Stderr::default);
                 if de.message.level == "error" {
-                    success = false;
+                    entry.success = false;
                 }
-                diagnostics.push_str(&de.message.rendered);
+                entry.stderr.push_str(&de.message.rendered);
             }
         }
         remaining = rest;
     }
     nonmessage_stdout.push_str(remaining);
-    ParsedOutput {
-        success,
+    ParsedOutputs {
         stdout: nonmessage_stdout,
-        stderr: diagnostics,
+        stderrs: map,
     }
 }
