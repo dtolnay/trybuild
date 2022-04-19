@@ -62,6 +62,14 @@ impl Runner {
 
         if tests.is_empty() {
             message::no_tests_enabled();
+        } else if project.keep_going && !project.has_pass {
+            failures = match self.run_all(&project, tests) {
+                Ok(failures) => failures,
+                Err(err) => {
+                    message::test_fail(err);
+                    len
+                }
+            }
         } else {
             for test in tests {
                 if let Err(err) = test.run(&project) {
@@ -260,6 +268,35 @@ impl Runner {
             },
         }
     }
+
+    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<usize> {
+        let mut failures = 0;
+        let output = cargo::build_all_tests(project)?;
+        let parsed = parse_cargo_json(&output.stdout);
+        let fallback = Stderr::default();
+
+        for mut t in tests {
+            let show_expected = false;
+            message::begin_test(&t.test, show_expected);
+
+            if t.error.is_none() {
+                t.error = check_exists(&t.test.path).err();
+            }
+
+            if t.error.is_none() {
+                let src_path = project.source_dir.join(&t.test.path);
+                let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
+                t.error = t.test.check(project, &t.name, this_test, "").err();
+            }
+
+            if let Some(err) = t.error {
+                failures += 1;
+                message::test_fail(err);
+            }
+        }
+
+        Ok(failures)
+    }
 }
 
 impl Test {
@@ -269,13 +306,23 @@ impl Test {
         check_exists(&self.path)?;
 
         let output = cargo::build_test(project, name)?;
+        let parsed = parse_cargo_json(&output.stdout);
         let src_path = project.source_dir.join(&self.path);
-        let mut outputs = parse_cargo_json(&output.stdout);
-        let this_test = outputs.stderrs.remove(&src_path).unwrap_or_default();
-        let success = this_test.success;
-        let stdout = &outputs.stdout;
+        let fallback = Stderr::default();
+        let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
+        self.check(project, name, this_test, &parsed.stdout)
+    }
+
+    fn check(
+        &self,
+        project: &Project,
+        name: &Name,
+        result: &Stderr,
+        build_stdout: &str,
+    ) -> Result<()> {
+        let success = result.success;
         let stderr = normalize::diagnostics(
-            &this_test.stderr,
+            &result.stderr,
             Context {
                 krate: &name.0,
                 source_dir: &project.source_dir,
@@ -291,7 +338,7 @@ impl Test {
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, name, success, stdout, stderr)
+        check(self, project, name, success, build_stdout, stderr)
     }
 
     fn check_pass(
