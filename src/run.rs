@@ -273,7 +273,7 @@ impl Test {
         let mut outputs = parse_cargo_json(&output.stdout);
         let this_test = outputs.stderrs.remove(&src_path).unwrap_or_default();
         let success = this_test.success;
-        let stdout = outputs.stdout;
+        let stdout = &outputs.stdout;
         let stderr = normalize::diagnostics(
             &this_test.stderr,
             Context {
@@ -299,7 +299,7 @@ impl Test {
         project: &Project,
         name: &Name,
         success: bool,
-        build_stdout: String,
+        build_stdout: &str,
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
@@ -323,14 +323,14 @@ impl Test {
         project: &Project,
         _name: &Name,
         success: bool,
-        build_stdout: String,
+        build_stdout: &str,
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
 
         if success {
             message::should_not_have_compiled();
-            message::fail_output(Fail, &build_stdout);
+            message::fail_output(Fail, build_stdout);
             message::warnings(preferred);
             return Err(Error::ShouldNotHaveCompiled);
         }
@@ -356,7 +356,7 @@ impl Test {
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 }
             }
-            message::fail_output(Warn, &build_stdout);
+            message::fail_output(Warn, build_stdout);
             return Ok(());
         }
 
