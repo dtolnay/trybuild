@@ -18,7 +18,7 @@ pub struct Context<'a> {
 
 pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     let bytes = output.as_ref();
-    let mut normalized = String::from_utf8_lossy(bytes).to_string();
+    let mut normalized = String::from_utf8_lossy(bytes).into_owned();
 
     let len = normalized.trim_end().len();
     normalized.truncate(len);
@@ -42,7 +42,7 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
 /// There is one "preferred" variation which is what we print when the stderr
 /// file is absent or not a match.
 pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
-    let mut from_bytes = String::from_utf8_lossy(&output).to_string();
+    let mut from_bytes = String::from_utf8_lossy(&output).into_owned();
     from_bytes = from_bytes.replace("\r\n", "\n");
 
     let variations = [
