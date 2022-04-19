@@ -41,9 +41,8 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
 ///
 /// There is one "preferred" variation which is what we print when the stderr
 /// file is absent or not a match.
-pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
-    let mut from_bytes = String::from_utf8_lossy(&output).into_owned();
-    from_bytes = from_bytes.replace("\r\n", "\n");
+pub fn diagnostics(mut output: String, context: Context) -> Variations {
+    output = output.replace("\r\n", "\n");
 
     let variations = [
         Basic,
@@ -62,7 +61,7 @@ pub fn diagnostics(output: Vec<u8>, context: Context) -> Variations {
         LinesOutsideInputFile,
     ]
     .iter()
-    .map(|normalization| apply(&from_bytes, *normalization, context))
+    .map(|normalization| apply(&output, *normalization, context))
     .collect();
 
     Variations { variations }

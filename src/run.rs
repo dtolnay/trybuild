@@ -15,7 +15,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::process::Output;
+use std::process::{ExitStatus, Output};
 use std::str;
 
 #[derive(Debug)]
@@ -269,9 +269,9 @@ impl Test {
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
 
-        let mut output = cargo::build_test(project, name)?;
+        let output = cargo::build_test(project, name)?;
         let src_path = project.source_dir.join(&self.path);
-        parse_cargo_json(&src_path, &mut output);
+        let output = parse_cargo_json(&src_path, output);
         let success = output.status.success();
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
@@ -299,7 +299,7 @@ impl Test {
         project: &Project,
         name: &Name,
         success: bool,
-        build_stdout: Vec<u8>,
+        build_stdout: String,
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
@@ -309,7 +309,7 @@ impl Test {
         }
 
         let mut output = cargo::run_test(project, name)?;
-        output.stdout.splice(..0, build_stdout);
+        output.stdout.splice(..0, build_stdout.bytes());
         message::output(preferred, &output);
         if output.status.success() {
             Ok(())
@@ -323,7 +323,7 @@ impl Test {
         project: &Project,
         _name: &Name,
         success: bool,
-        build_stdout: Vec<u8>,
+        build_stdout: String,
         variations: Variations,
     ) -> Result<()> {
         let preferred = variations.preferred();
@@ -519,15 +519,16 @@ struct RustcMessage {
     level: String,
 }
 
-fn parse_cargo_json(src_path: &Path, output: &mut Output) {
+struct ParsedOutput {
+    status: ExitStatus,
+    stdout: String,
+    stderr: String,
+}
+
+fn parse_cargo_json(src_path: &Path, output: Output) -> ParsedOutput {
     let mut diagnostics = String::new();
     let mut nonmessage_stdout = String::new();
-    let mut remaining = match str::from_utf8(&output.stdout) {
-        Ok(remaining) => remaining,
-        // TODO: this should be easy to support if someone needs it, just needs
-        // an alternative to `find` below.
-        Err(_) => return,
-    };
+    let mut remaining = &*String::from_utf8_lossy(&output.stdout);
     while !remaining.is_empty() {
         let begin = match remaining.find("{\"reason\":") {
             Some(begin) => begin,
@@ -548,6 +549,9 @@ fn parse_cargo_json(src_path: &Path, output: &mut Output) {
         remaining = rest;
     }
     nonmessage_stdout.push_str(remaining);
-    output.stdout = Vec::from(nonmessage_stdout);
-    output.stderr = Vec::from(diagnostics);
+    ParsedOutput {
+        status: output.status,
+        stdout: nonmessage_stdout,
+        stderr: diagnostics,
+    }
 }

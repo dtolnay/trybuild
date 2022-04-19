@@ -180,7 +180,7 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     }
 }
 
-pub(crate) fn fail_output(level: Level, stdout: &[u8]) {
+pub(crate) fn fail_output(level: Level, stdout: &str) {
     let color = match level {
         Fail => Red,
         Warn => Yellow,
