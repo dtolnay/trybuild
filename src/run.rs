@@ -15,7 +15,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::process::{ExitStatus, Output};
+use std::process::Output;
 use std::str;
 
 #[derive(Debug)]
@@ -272,7 +272,7 @@ impl Test {
         let output = cargo::build_test(project, name)?;
         let src_path = project.source_dir.join(&self.path);
         let output = parse_cargo_json(&src_path, output);
-        let success = output.status.success();
+        let success = output.success;
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
             output.stderr,
@@ -520,7 +520,7 @@ struct RustcMessage {
 }
 
 struct ParsedOutput {
-    status: ExitStatus,
+    success: bool,
     stdout: String,
     stderr: String,
 }
@@ -550,7 +550,7 @@ fn parse_cargo_json(src_path: &Path, output: Output) -> ParsedOutput {
     }
     nonmessage_stdout.push_str(remaining);
     ParsedOutput {
-        status: output.status,
+        success: output.status.success(),
         stdout: nonmessage_stdout,
         stderr: diagnostics,
     }
