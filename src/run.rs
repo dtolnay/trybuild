@@ -15,7 +15,6 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::process::Output;
 use std::str;
 
 #[derive(Debug)]
@@ -271,7 +270,7 @@ impl Test {
 
         let output = cargo::build_test(project, name)?;
         let src_path = project.source_dir.join(&self.path);
-        let output = parse_cargo_json(&src_path, output);
+        let output = parse_cargo_json(&src_path, &output.stdout);
         let success = output.success;
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
@@ -525,10 +524,11 @@ struct ParsedOutput {
     stderr: String,
 }
 
-fn parse_cargo_json(src_path: &Path, output: Output) -> ParsedOutput {
+fn parse_cargo_json(src_path: &Path, stdout: &[u8]) -> ParsedOutput {
+    let mut success = true;
     let mut diagnostics = String::new();
     let mut nonmessage_stdout = String::new();
-    let mut remaining = &*String::from_utf8_lossy(&output.stdout);
+    let mut remaining = &*String::from_utf8_lossy(stdout);
     while !remaining.is_empty() {
         let begin = match remaining.find("{\"reason\":") {
             Some(begin) => begin,
@@ -543,6 +543,9 @@ fn parse_cargo_json(src_path: &Path, output: Output) -> ParsedOutput {
         let (message, rest) = rest.split_at(len);
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" && de.target.src_path == src_path {
+                if de.message.level == "error" {
+                    success = false;
+                }
                 diagnostics.push_str(&de.message.rendered);
             }
         }
@@ -550,7 +553,7 @@ fn parse_cargo_json(src_path: &Path, output: Output) -> ParsedOutput {
     }
     nonmessage_stdout.push_str(remaining);
     ParsedOutput {
-        success: output.status.success(),
+        success,
         stdout: nonmessage_stdout,
         stderr: diagnostics,
     }
