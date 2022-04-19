@@ -41,8 +41,8 @@ pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
 ///
 /// There is one "preferred" variation which is what we print when the stderr
 /// file is absent or not a match.
-pub fn diagnostics(mut output: String, context: Context) -> Variations {
-    output = output.replace("\r\n", "\n");
+pub fn diagnostics(output: &str, context: Context) -> Variations {
+    let output = output.replace("\r\n", "\n");
 
     let variations = [
         Basic,

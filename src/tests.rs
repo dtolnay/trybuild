@@ -25,7 +25,7 @@ macro_rules! test_normalize {
                     normalized_path: Directory::new("/home/user/documents/rust/diesel/diesel"),
                 }],
             };
-            let original = $original.to_owned();
+            let original = $original;
             let variations = super::diagnostics(original, context);
             let preferred = variations.preferred();
             let expected = $expected;

@@ -275,7 +275,7 @@ impl Test {
         let success = output.success;
         let stdout = output.stdout;
         let stderr = normalize::diagnostics(
-            output.stderr,
+            &output.stderr,
             Context {
                 krate: &name.0,
                 source_dir: &project.source_dir,
