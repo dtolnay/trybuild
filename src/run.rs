@@ -39,6 +39,11 @@ pub struct PathDependency {
     pub normalized_path: Directory,
 }
 
+struct Report {
+    failures: usize,
+    created_wip: usize,
+}
+
 impl Runner {
     pub fn run(&mut self) {
         let mut tests = expand_globs(&self.tests);
@@ -58,31 +63,47 @@ impl Runner {
         print!("\n\n");
 
         let len = tests.len();
-        let mut failures = 0;
+        let mut report = Report {
+            failures: 0,
+            created_wip: 0,
+        };
 
         if tests.is_empty() {
             message::no_tests_enabled();
         } else if project.keep_going && !project.has_pass {
-            failures = match self.run_all(&project, tests) {
+            report = match self.run_all(&project, tests) {
                 Ok(failures) => failures,
                 Err(err) => {
                     message::test_fail(err);
-                    len
+                    Report {
+                        failures: len,
+                        created_wip: 0,
+                    }
                 }
             }
         } else {
             for test in tests {
-                if let Err(err) = test.run(&project) {
-                    failures += 1;
-                    message::test_fail(err);
+                match test.run(&project) {
+                    Ok(Outcome::Passed) => {}
+                    Ok(Outcome::CreatedWip) => report.created_wip += 1,
+                    Err(err) => {
+                        report.failures += 1;
+                        message::test_fail(err);
+                    }
                 }
             }
         }
 
         print!("\n\n");
 
-        if failures > 0 && project.name != "trybuild-tests" {
-            panic!("{} of {} tests failed", failures, len);
+        if report.failures > 0 && project.name != "trybuild-tests" {
+            panic!("{} of {} tests failed", report.failures, len);
+        }
+        if report.created_wip > 0 && project.name != "trybuild-tests" {
+            panic!(
+                "successfully created new stderr files for {} test cases",
+                report.created_wip,
+            );
         }
     }
 
@@ -269,8 +290,11 @@ impl Runner {
         }
     }
 
-    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<usize> {
-        let mut failures = 0;
+    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<Report> {
+        let mut report = Report {
+            failures: 0,
+            created_wip: 0,
+        };
         let output = cargo::build_all_tests(project)?;
         let parsed = parse_cargo_json(&output.stdout);
         let fallback = Stderr::default();
@@ -286,21 +310,30 @@ impl Runner {
             if t.error.is_none() {
                 let src_path = project.source_dir.join(&t.test.path);
                 let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
-                t.error = t.test.check(project, &t.name, this_test, "").err();
+                match t.test.check(project, &t.name, this_test, "") {
+                    Ok(Outcome::Passed) => {}
+                    Ok(Outcome::CreatedWip) => report.created_wip += 1,
+                    Err(error) => t.error = Some(error),
+                }
             }
 
             if let Some(err) = t.error {
-                failures += 1;
+                report.failures += 1;
                 message::test_fail(err);
             }
         }
 
-        Ok(failures)
+        Ok(report)
     }
 }
 
+enum Outcome {
+    Passed,
+    CreatedWip,
+}
+
 impl Test {
-    fn run(&self, project: &Project, name: &Name) -> Result<()> {
+    fn run(&self, project: &Project, name: &Name) -> Result<Outcome> {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
@@ -319,7 +352,7 @@ impl Test {
         name: &Name,
         result: &Stderr,
         build_stdout: &str,
-    ) -> Result<()> {
+    ) -> Result<Outcome> {
         let success = result.success;
         let stderr = normalize::diagnostics(
             &result.stderr,
@@ -348,7 +381,7 @@ impl Test {
         success: bool,
         build_stdout: &str,
         variations: Variations,
-    ) -> Result<()> {
+    ) -> Result<Outcome> {
         let preferred = variations.preferred();
         if !success {
             message::failed_to_build(preferred);
@@ -359,7 +392,7 @@ impl Test {
         output.stdout.splice(..0, build_stdout.bytes());
         message::output(preferred, &output);
         if output.status.success() {
-            Ok(())
+            Ok(Outcome::Passed)
         } else {
             Err(Error::RunFailed)
         }
@@ -372,7 +405,7 @@ impl Test {
         success: bool,
         build_stdout: &str,
         variations: Variations,
-    ) -> Result<()> {
+    ) -> Result<Outcome> {
         let preferred = variations.preferred();
 
         if success {
@@ -385,7 +418,7 @@ impl Test {
         let stderr_path = self.path.with_extension("stderr");
 
         if !stderr_path.exists() {
-            match project.update {
+            let outcome = match project.update {
                 Update::Wip => {
                     let wip_dir = Path::new("wip");
                     fs::create_dir_all(wip_dir)?;
@@ -397,14 +430,16 @@ impl Test {
                     let wip_path = wip_dir.join(stderr_name);
                     message::write_stderr_wip(&wip_path, &stderr_path, preferred);
                     fs::write(wip_path, preferred).map_err(Error::WriteStderr)?;
+                    Outcome::CreatedWip
                 }
                 Update::Overwrite => {
                     message::overwrite_stderr(&stderr_path, preferred);
                     fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
+                    Outcome::Passed
                 }
-            }
+            };
             message::fail_output(Warn, build_stdout);
-            return Ok(());
+            return Ok(outcome);
         }
 
         let expected = fs::read_to_string(&stderr_path)
@@ -413,7 +448,7 @@ impl Test {
 
         if variations.any(|stderr| expected == stderr) {
             message::ok();
-            return Ok(());
+            return Ok(Outcome::Passed);
         }
 
         match project.update {
@@ -424,7 +459,7 @@ impl Test {
             Update::Overwrite => {
                 message::overwrite_stderr(&stderr_path, preferred);
                 fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
-                Ok(())
+                Ok(Outcome::Passed)
             }
         }
     }
@@ -495,7 +530,7 @@ fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
 }
 
 impl ExpandedTest {
-    fn run(self, project: &Project) -> Result<()> {
+    fn run(self, project: &Project) -> Result<Outcome> {
         match self.error {
             None => self.test.run(project, &self.name),
             Some(error) => {
