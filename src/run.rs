@@ -216,10 +216,11 @@ impl Runner {
 
         let features = source_manifest
             .features
-            .keys()
-            .map(|feature| {
-                let enable = format!("{}/{}", crate_name, feature);
-                (feature.clone(), vec![enable])
+            .iter()
+            .map(|(feature, enabled_features)| {
+                let mut updated_enabled_features = enabled_features.clone();
+                updated_enabled_features.push(format!("{}/{}", crate_name, feature));
+                (feature.clone(), updated_enabled_features)
             })
             .collect();
 
