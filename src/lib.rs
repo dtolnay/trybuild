@@ -211,6 +211,7 @@
 #![allow(
     clippy::collapsible_if,
     clippy::default_trait_access,
+    clippy::derive_partial_eq_without_eq,
     clippy::doc_markdown,
     clippy::enum_glob_use,
     clippy::iter_not_returning_iterator, // https://github.com/rust-lang/rust-clippy/issues/8285
