@@ -1,5 +1,4 @@
 use glob::{GlobError, PatternError};
-use std::env;
 use std::ffi::OsString;
 use std::fmt::{self, Display};
 use std::io;
@@ -15,7 +14,6 @@ pub enum Error {
     Mismatch,
     Open(PathBuf, io::Error),
     Pattern(PatternError),
-    PkgName(env::VarError),
     ProjectDir,
     ReadStderr(io::Error),
     RunFailed,
@@ -41,7 +39,6 @@ impl Display for Error {
             Mismatch => write!(f, "compiler error does not match expected error"),
             Open(path, e) => write!(f, "{}: {}", path.display(), e),
             Pattern(e) => write!(f, "{}", e),
-            PkgName(e) => write!(f, "failed to detect CARGO_PKG_NAME: {}", e),
             ProjectDir => write!(f, "failed to determine name of project dir"),
             ReadStderr(e) => write!(f, "failed to read stderr file: {}", e),
             RunFailed => write!(f, "execution of the test case was unsuccessful"),

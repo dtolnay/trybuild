@@ -114,8 +114,6 @@ impl Runner {
             packages,
         } = cargo::metadata()?;
 
-        let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
-
         let mut has_pass = false;
         let mut has_compile_fail = false;
         for e in tests {
@@ -149,12 +147,12 @@ impl Runner {
             })
             .collect();
 
+        let crate_name = &source_manifest.package.name;
         let project_dir = path!(target_dir / "tests" / crate_name /);
         fs::create_dir_all(&project_dir)?;
 
         let project_name = format!("{}-tests", crate_name);
         let manifest = self.make_manifest(
-            crate_name,
             &workspace,
             &project_name,
             &source_dir,
@@ -205,13 +203,13 @@ impl Runner {
 
     fn make_manifest(
         &self,
-        crate_name: String,
         workspace: &Directory,
         project_name: &str,
         source_dir: &Directory,
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
     ) -> Manifest {
+        let crate_name = source_manifest.package.name;
         let workspace_manifest = dependencies::get_workspace_manifest(workspace);
 
         let features = source_manifest

@@ -93,6 +93,7 @@ pub struct Manifest {
 
 #[derive(Deserialize, Default, Debug)]
 pub struct Package {
+    pub name: String,
     #[serde(default)]
     pub edition: Edition,
     pub resolver: Option<String>,
