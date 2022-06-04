@@ -123,9 +123,7 @@ impl Runner {
             }
         }
 
-        let source_dir = env::var_os("CARGO_MANIFEST_DIR")
-            .map(Directory::from)
-            .ok_or(Error::ProjectDir)?;
+        let source_dir = cargo::manifest_dir()?;
         let source_manifest = dependencies::get_manifest(&source_dir);
 
         let mut features = features::find();

@@ -43,6 +43,19 @@ fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, Pa
     ))
 }
 
+pub fn manifest_dir() -> Result<Directory> {
+    if let Some(manifest_dir) = env::var_os("CARGO_MANIFEST_DIR") {
+        return Ok(Directory::from(manifest_dir));
+    }
+    let mut dir = Directory::current()?;
+    loop {
+        if dir.join("Cargo.toml").exists() {
+            return Ok(dir);
+        }
+        dir = dir.parent().ok_or(Error::ProjectDir)?;
+    }
+}
+
 pub fn build_dependencies(project: &mut Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {

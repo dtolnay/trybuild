@@ -1,6 +1,7 @@
 use serde::de::{Deserialize, Deserializer};
 use serde_derive::Serialize;
 use std::borrow::Cow;
+use std::env;
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -18,12 +19,20 @@ impl Directory {
         Directory { path }
     }
 
+    pub fn current() -> io::Result<Self> {
+        env::current_dir().map(Directory::new)
+    }
+
     pub fn to_string_lossy(&self) -> Cow<str> {
         self.path.to_string_lossy()
     }
 
     pub fn join<P: AsRef<Path>>(&self, tail: P) -> PathBuf {
         self.path.join(tail)
+    }
+
+    pub fn parent(&self) -> Option<Self> {
+        self.path.parent().map(Directory::new)
     }
 
     pub fn canonicalize(&self) -> io::Result<Self> {
