@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 use crate::manifest::Name;
 use crate::Test;
+use std::collections::BTreeMap as Map;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -33,16 +34,26 @@ pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
 
 struct ExpandedTestSet {
     vec: Vec<ExpandedTest>,
+    path_to_index: Map<PathBuf, usize>,
 }
 
 impl ExpandedTestSet {
     fn new() -> Self {
-        ExpandedTestSet { vec: Vec::new() }
+        ExpandedTestSet {
+            vec: Vec::new(),
+            path_to_index: Map::new(),
+        }
     }
 
     fn insert(&mut self, test: Test, error: Option<Error>) {
-        let name = Name(format!("trybuild{:03}", self.vec.len()));
-        self.vec.push(ExpandedTest { name, test, error });
+        if let Some(&i) = self.path_to_index.get(&test.path) {
+            self.vec[i].test.expected = test.expected;
+        } else {
+            let index = self.vec.len();
+            let name = Name(format!("trybuild{:03}", index));
+            self.path_to_index.insert(test.path.clone(), index);
+            self.vec.push(ExpandedTest { name, test, error });
+        }
     }
 }
 
