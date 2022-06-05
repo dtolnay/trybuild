@@ -14,21 +14,18 @@ pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     let mut set = ExpandedTestSet::new();
 
     for test in tests {
-        if let Some(utf8) = test.path.to_str() {
-            if utf8.contains('*') {
-                match glob(utf8) {
-                    Ok(paths) => {
-                        let expected = test.expected;
-                        for path in paths {
-                            set.insert(Test { path, expected }, None);
-                        }
+        match test.path.to_str() {
+            Some(utf8) if utf8.contains('*') => match glob(utf8) {
+                Ok(paths) => {
+                    let expected = test.expected;
+                    for path in paths {
+                        set.insert(Test { path, expected }, None);
                     }
-                    Err(error) => set.insert(test.clone(), Some(error)),
                 }
-                continue;
-            }
+                Err(error) => set.insert(test.clone(), Some(error)),
+            },
+            _ => set.insert(test.clone(), None),
         }
-        set.insert(test.clone(), None);
     }
 
     set.vec
