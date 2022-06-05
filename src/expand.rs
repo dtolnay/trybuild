@@ -11,18 +11,6 @@ pub(crate) struct ExpandedTest {
 }
 
 pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
-    fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
-        let mut paths = glob::glob(pattern)?
-            .map(|entry| entry.map_err(Error::from))
-            .collect::<Result<Vec<PathBuf>>>()?;
-        paths.sort();
-        Ok(paths)
-    }
-
-    fn bin_name(i: usize) -> Name {
-        Name(format!("trybuild{:03}", i))
-    }
-
     let mut vec = Vec::new();
 
     for test in tests {
@@ -55,4 +43,16 @@ pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
     }
 
     vec
+}
+
+fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
+    let mut paths = glob::glob(pattern)?
+        .map(|entry| entry.map_err(Error::from))
+        .collect::<Result<Vec<PathBuf>>>()?;
+    paths.sort();
+    Ok(paths)
+}
+
+fn bin_name(i: usize) -> Name {
+    Name(format!("trybuild{:03}", i))
 }
