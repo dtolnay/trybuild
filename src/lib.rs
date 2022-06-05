@@ -242,6 +242,7 @@ mod diff;
 mod directory;
 mod env;
 mod error;
+mod expand;
 mod features;
 mod flock;
 mod manifest;
