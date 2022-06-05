@@ -11,38 +11,42 @@ pub(crate) struct ExpandedTest {
 }
 
 pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
-    let mut vec = Vec::new();
+    let mut set = ExpandedTestSet::new();
 
     for test in tests {
-        let mut expanded = ExpandedTest {
-            name: bin_name(vec.len()),
-            test: test.clone(),
-            error: None,
-        };
         if let Some(utf8) = test.path.to_str() {
             if utf8.contains('*') {
                 match glob(utf8) {
                     Ok(paths) => {
+                        let expected = test.expected;
                         for path in paths {
-                            vec.push(ExpandedTest {
-                                name: bin_name(vec.len()),
-                                test: Test {
-                                    path,
-                                    expected: expanded.test.expected,
-                                },
-                                error: None,
-                            });
+                            set.insert(Test { path, expected }, None);
                         }
-                        continue;
                     }
-                    Err(error) => expanded.error = Some(error),
+                    Err(error) => set.insert(test.clone(), Some(error)),
                 }
+                continue;
             }
         }
-        vec.push(expanded);
+        set.insert(test.clone(), None);
     }
 
-    vec
+    set.vec
+}
+
+struct ExpandedTestSet {
+    vec: Vec<ExpandedTest>,
+}
+
+impl ExpandedTestSet {
+    fn new() -> Self {
+        ExpandedTestSet { vec: Vec::new() }
+    }
+
+    fn insert(&mut self, test: Test, error: Option<Error>) {
+        let name = Name(format!("trybuild{:03}", self.vec.len()));
+        self.vec.push(ExpandedTest { name, test, error });
+    }
 }
 
 fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
@@ -51,8 +55,4 @@ fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
         .collect::<Result<Vec<PathBuf>>>()?;
     paths.sort();
     Ok(paths)
-}
-
-fn bin_name(i: usize) -> Name {
-    Name(format!("trybuild{:03}", i))
 }
