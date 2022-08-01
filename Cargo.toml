@@ -2,6 +2,7 @@
 name = "trybuild"
 version = "1.0.63"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
+categories = ["development-tools::testing"]
 description = "Test harness for ui tests of compiler diagnostics"
 documentation = "https://docs.rs/trybuild"
 edition = "2018"
