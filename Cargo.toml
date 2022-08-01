@@ -2,14 +2,14 @@
 name = "trybuild"
 version = "1.0.63"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
-edition = "2018"
-rust-version = "1.36"
-license = "MIT OR Apache-2.0"
 description = "Test harness for ui tests of compiler diagnostics"
-repository = "https://github.com/dtolnay/trybuild"
 documentation = "https://docs.rs/trybuild"
+edition = "2018"
 exclude = ["screenshots/*"]
+license = "MIT OR Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/dtolnay/trybuild"
+rust-version = "1.36"
 
 [features]
 # Experimental: highlight the diff between the expected and actual compiler
