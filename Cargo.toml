@@ -9,7 +9,6 @@ edition = "2018"
 exclude = ["screenshots/*"]
 keywords = ["macros", "testing", "dev-dependencies"]
 license = "MIT OR Apache-2.0"
-readme = "README.md"
 repository = "https://github.com/dtolnay/trybuild"
 rust-version = "1.36"
 
