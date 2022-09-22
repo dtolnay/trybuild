@@ -241,7 +241,9 @@ impl Runner {
             dependencies: Map::new(),
             target: source_manifest.target,
             bins: Vec::new(),
-            workspace: Some(Workspace {}),
+            workspace: Some(Workspace {
+                dependencies: workspace_manifest.workspace.dependencies,
+            }),
             // Within a workspace, only the [patch] and [replace] sections in
             // the workspace root's Cargo.toml are applied by Cargo.
             patch: workspace_manifest.patch,
@@ -267,6 +269,7 @@ impl Runner {
                 branch: None,
                 tag: None,
                 rev: None,
+                workspace: false,
                 rest: Map::new(),
             },
         );

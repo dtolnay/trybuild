@@ -41,6 +41,7 @@ pub fn try_get_workspace_manifest(manifest_dir: &Directory) -> Result<WorkspaceM
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: WorkspaceManifest = toml::from_str(&manifest_str)?;
 
+    fix_dependencies(&mut manifest.workspace.dependencies, manifest_dir);
     fix_patches(&mut manifest.patch, manifest_dir);
     fix_replacements(&mut manifest.replace, manifest_dir);
 
@@ -84,6 +85,8 @@ pub struct WorkspaceManifest {
 pub struct WorkspaceWorkspace {
     #[serde(default)]
     pub package: WorkspacePackage,
+    #[serde(default)]
+    pub dependencies: Map<String, Dependency>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -142,6 +145,8 @@ pub struct Dependency {
     pub tag: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rev: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub workspace: bool,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
 }
@@ -186,6 +191,10 @@ fn get_true() -> bool {
 
 fn is_true(boolean: &bool) -> bool {
     *boolean
+}
+
+fn is_false(boolean: &bool) -> bool {
+    !*boolean
 }
 
 impl Default for EditionOrInherit {
@@ -267,6 +276,7 @@ impl<'de> Deserialize<'de> for Dependency {
                     branch: None,
                     tag: None,
                     rev: None,
+                    workspace: false,
                     rest: Map::new(),
                 })
             }
