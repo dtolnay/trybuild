@@ -12,14 +12,14 @@ use std::fs;
 use std::path::PathBuf;
 use toml::Value;
 
-pub fn get_manifest(manifest_dir: &Directory) -> Manifest {
-    try_get_manifest(manifest_dir).unwrap_or_default()
-}
-
-fn try_get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
+pub fn get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
-    let manifest_str = fs::read_to_string(cargo_toml_path)?;
-    let mut manifest: Manifest = toml::from_str(&manifest_str)?;
+    let mut manifest = (|| {
+        let manifest_str = fs::read_to_string(&cargo_toml_path)?;
+        let manifest: Manifest = toml::from_str(&manifest_str)?;
+        Ok(manifest)
+    })()
+    .map_err(|err| Error::GetManifest(cargo_toml_path, Box::new(err)))?;
 
     fix_dependencies(&mut manifest.dependencies, manifest_dir);
     fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);

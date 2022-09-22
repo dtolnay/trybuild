@@ -125,7 +125,7 @@ impl Runner {
         }
 
         let source_dir = cargo::manifest_dir()?;
-        let source_manifest = dependencies::get_manifest(&source_dir);
+        let source_manifest = dependencies::get_manifest(&source_dir)?;
 
         let mut features = features::find();
 
