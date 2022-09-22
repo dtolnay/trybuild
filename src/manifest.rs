@@ -66,7 +66,10 @@ pub struct Build {
 }
 
 #[derive(Serialize, Debug)]
-pub struct Workspace {}
+pub struct Workspace {
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub dependencies: Map<String, Dependency>,
+}
 
 impl Default for Edition {
     fn default() -> Self {
