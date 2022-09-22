@@ -141,7 +141,7 @@ pub struct TargetDependencies {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
 pub struct RegistryPatch {
-    crates: Map<String, Patch>,
+    pub crates: Map<String, Patch>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
