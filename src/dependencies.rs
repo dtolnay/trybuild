@@ -1,9 +1,10 @@
 use crate::directory::Directory;
 use crate::error::Error;
+use crate::inherit::InheritEdition;
 use crate::manifest::Edition;
 use serde::de::value::MapAccessDeserializer;
-use serde::de::{self, Visitor};
-use serde::de::{Deserialize, Deserializer};
+use serde::de::value::StrDeserializer;
+use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
@@ -72,9 +73,22 @@ fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Directory) {
 #[derive(Deserialize, Default, Debug)]
 pub struct WorkspaceManifest {
     #[serde(default)]
+    pub workspace: WorkspaceWorkspace,
+    #[serde(default)]
     pub patch: Map<String, RegistryPatch>,
     #[serde(default)]
     pub replace: Map<String, Patch>,
+}
+
+#[derive(Deserialize, Default, Debug)]
+pub struct WorkspaceWorkspace {
+    #[serde(default)]
+    pub package: WorkspacePackage,
+}
+
+#[derive(Deserialize, Default, Debug)]
+pub struct WorkspacePackage {
+    pub edition: Option<Edition>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -95,8 +109,14 @@ pub struct Manifest {
 pub struct Package {
     pub name: String,
     #[serde(default)]
-    pub edition: Edition,
+    pub edition: EditionOrInherit,
     pub resolver: Option<String>,
+}
+
+#[derive(Debug)]
+pub enum EditionOrInherit {
+    Edition(Edition),
+    Inherit,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -166,6 +186,46 @@ fn get_true() -> bool {
 
 fn is_true(boolean: &bool) -> bool {
     *boolean
+}
+
+impl Default for EditionOrInherit {
+    fn default() -> Self {
+        EditionOrInherit::Edition(Edition::default())
+    }
+}
+
+impl<'de> Deserialize<'de> for EditionOrInherit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EditionOrInheritVisitor;
+
+        impl<'de> Visitor<'de> for EditionOrInheritVisitor {
+            type Value = EditionOrInherit;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("edition")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Edition::deserialize(StrDeserializer::new(s)).map(EditionOrInherit::Edition)
+            }
+
+            fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+            where
+                M: de::MapAccess<'de>,
+            {
+                InheritEdition::deserialize(MapAccessDeserializer::new(map))?;
+                Ok(EditionOrInherit::Inherit)
+            }
+        }
+
+        deserializer.deserialize_any(EditionOrInheritVisitor)
+    }
 }
 
 impl Serialize for Dependency {

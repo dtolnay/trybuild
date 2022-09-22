@@ -1,5 +1,5 @@
 use crate::cargo::{self, Metadata};
-use crate::dependencies::{self, Dependency};
+use crate::dependencies::{self, Dependency, EditionOrInherit};
 use crate::directory::Directory;
 use crate::env::Update;
 use crate::error::{Error, Result};
@@ -157,7 +157,7 @@ impl Runner {
             &source_dir,
             tests,
             source_manifest,
-        );
+        )?;
 
         if let Some(enabled_features) = &mut features {
             enabled_features.retain(|feature| manifest.features.contains_key(feature));
@@ -207,9 +207,18 @@ impl Runner {
         source_dir: &Directory,
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
-    ) -> Manifest {
+    ) -> Result<Manifest> {
         let crate_name = source_manifest.package.name;
         let workspace_manifest = dependencies::get_workspace_manifest(workspace);
+
+        let edition = match source_manifest.package.edition {
+            EditionOrInherit::Edition(edition) => edition,
+            EditionOrInherit::Inherit => workspace_manifest
+                .workspace
+                .package
+                .edition
+                .ok_or(Error::NoWorkspaceManifest)?,
+        };
 
         let features = source_manifest
             .features
@@ -224,7 +233,7 @@ impl Runner {
             package: Package {
                 name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
-                edition: source_manifest.package.edition,
+                edition,
                 resolver: source_manifest.package.resolver,
                 publish: false,
             },
@@ -276,7 +285,7 @@ impl Runner {
             }
         }
 
-        manifest
+        Ok(manifest)
     }
 
     fn make_config(&self) -> Config {
