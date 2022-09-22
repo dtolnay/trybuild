@@ -8,6 +8,7 @@ use std::path::PathBuf;
 pub enum Error {
     Cargo(io::Error),
     CargoFail,
+    GetManifest(PathBuf, Box<Error>),
     Glob(GlobError),
     Io(io::Error),
     Metadata(serde_json::Error),
@@ -33,6 +34,7 @@ impl Display for Error {
         match self {
             Cargo(e) => write!(f, "failed to execute cargo: {}", e),
             CargoFail => write!(f, "cargo reported an error"),
+            GetManifest(path, e) => write!(f, "failed to read manifest {}: {}", path.display(), e),
             Glob(e) => write!(f, "{}", e),
             Io(e) => write!(f, "{}", e),
             Metadata(e) => write!(f, "failed to read cargo metadata: {}", e),
