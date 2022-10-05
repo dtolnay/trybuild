@@ -226,7 +226,8 @@
     clippy::single_match_else,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
-    clippy::unused_self
+    clippy::unused_self,
+    clippy::while_let_on_iterator,
 )]
 #![deny(clippy::clone_on_ref_ptr)]
 
