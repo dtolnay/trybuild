@@ -4,6 +4,7 @@ mod tests;
 
 use crate::directory::Directory;
 use crate::run::PathDependency;
+use std::cmp;
 use std::path::Path;
 
 #[derive(Copy, Clone)]
@@ -59,6 +60,7 @@ pub fn diagnostics(output: &str, context: Context) -> Variations {
         ArrowOtherCrate,
         RelativeToDir,
         LinesOutsideInputFile,
+        Unindent,
     ]
     .iter()
     .map(|normalization| apply(&output, *normalization, context))
@@ -97,6 +99,7 @@ enum Normalization {
     ArrowOtherCrate,
     RelativeToDir,
     LinesOutsideInputFile,
+    Unindent,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -120,6 +123,10 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
                 normalized.push('\n');
             }
         }
+    }
+
+    if normalization >= Unindent {
+        normalized = unindent(normalized);
     }
 
     trim(normalized)
@@ -401,4 +408,122 @@ fn replace_case_insensitive(line: &str, pattern: &str, replacement: &str) -> Str
     }
 
     replaced
+}
+
+#[derive(PartialEq)]
+enum IndentedLineKind {
+    // `error`
+    // `warning`
+    Heading,
+
+    // Contains max number of spaces that can be cut based on this line.
+    // `   --> foo` = 2
+    // `    | foo` = 3
+    // `   ::: foo` = 2
+    // `10  | foo` = 1
+    Code(usize),
+
+    // `note:`
+    // `...`
+    Note,
+
+    // Contains number of leading spaces.
+    Other(usize),
+}
+
+fn unindent(diag: String) -> String {
+    let mut normalized = String::new();
+    let mut lines = diag.lines();
+
+    while let Some(line) = lines.next() {
+        normalized.push_str(line);
+        normalized.push('\n');
+
+        if indented_line_kind(line) != IndentedLineKind::Heading {
+            continue;
+        }
+
+        let mut ahead = lines.clone();
+        let next_line = match ahead.next() {
+            Some(line) => line,
+            None => continue,
+        };
+
+        if let IndentedLineKind::Code(indent) = indented_line_kind(next_line) {
+            if next_line[indent + 1..].starts_with("--> ") {
+                let mut lines_in_block = 1;
+                let mut least_indent = indent;
+                while let Some(line) = ahead.next() {
+                    match indented_line_kind(line) {
+                        IndentedLineKind::Heading => break,
+                        IndentedLineKind::Code(indent) => {
+                            lines_in_block += 1;
+                            least_indent = cmp::min(least_indent, indent);
+                        }
+                        IndentedLineKind::Note => lines_in_block += 1,
+                        IndentedLineKind::Other(spaces) => {
+                            if spaces > 10 {
+                                lines_in_block += 1;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+                for _ in 0..lines_in_block {
+                    let line = lines.next().unwrap();
+                    if let IndentedLineKind::Code(_) | IndentedLineKind::Other(_) =
+                        indented_line_kind(line)
+                    {
+                        let space = line.find(' ').unwrap();
+                        normalized.push_str(&line[..space]);
+                        normalized.push_str(&line[space + least_indent..]);
+                    } else {
+                        normalized.push_str(line);
+                    }
+                    normalized.push('\n');
+                }
+            }
+        }
+    }
+
+    normalized
+}
+
+fn indented_line_kind(line: &str) -> IndentedLineKind {
+    if let Some(heading_len) = if line.starts_with("error") {
+        Some("error".len())
+    } else if line.starts_with("warning") {
+        Some("warning".len())
+    } else {
+        None
+    } {
+        if line[heading_len..].starts_with(&[':', '['][..]) {
+            return IndentedLineKind::Heading;
+        }
+    }
+
+    if line.starts_with("note:") || line == "..." {
+        return IndentedLineKind::Note;
+    }
+
+    let is_space = |b: &u8| *b == b' ';
+    if line.starts_with("... ") {
+        let spaces = line[4..].bytes().take_while(is_space).count();
+        return IndentedLineKind::Code(spaces);
+    }
+
+    let digits = line.bytes().take_while(u8::is_ascii_digit).count();
+    let spaces = line[digits..].bytes().take_while(|b| *b == b' ').count();
+    let rest = &line[digits + spaces..];
+    if spaces > 0
+        && (rest == "|"
+            || rest.starts_with("| ")
+            || digits == 0
+                && (rest.starts_with("--> ") || rest.starts_with("::: ") || rest.starts_with("= ")))
+    {
+        return IndentedLineKind::Code(spaces - 1);
+    }
+
+    IndentedLineKind::Other(if digits == 0 { spaces } else { 0 })
 }

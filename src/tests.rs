@@ -62,7 +62,7 @@ error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not 
    --> \\git\\trybuild\\test_suite\\tests\\ui\\error.rs:22:61
 " "
 error[E0277]: the trait bound `QueryParams: serde::de::Deserialize<'de>` is not satisfied
-   --> tests/ui/error.rs:22:61
+ --> tests/ui/error.rs:22:61
 "}
 
 test_normalize! {test_rust_lib
@@ -83,18 +83,18 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
    | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 " "
 error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4Addr` in the current scope
-  --> tests/ui/not-repeatable.rs:6:13
-   |
-6  |     let _ = quote! { #(#ip)* };
-   |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
-   |
-  ::: $RUST/src/libstd/net/ip.rs
-  ::: $RUST/std/src/net/ip.rs
-   |
-   | pub struct Ipv4Addr {
-   | -------------------
-   | |
-   | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
+ --> tests/ui/not-repeatable.rs:6:13
+  |
+6 |     let _ = quote! { #(#ip)* };
+  |             ^^^^^^^^^^^^^^^^^^ method not found in `std::net::Ipv4Addr`
+  |
+ ::: $RUST/src/libstd/net/ip.rs
+ ::: $RUST/std/src/net/ip.rs
+  |
+  | pub struct Ipv4Addr {
+  | -------------------
+  | |
+  | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 "}
 
 test_normalize! {test_type_dir_backslash
@@ -111,14 +111,14 @@ error[E0277]: `*mut _` cannot be shared between threads safely
     = note: required because it appears within the type `[closure@/git/trybuild/test_suite/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
 " "
 error[E0277]: `*mut _` cannot be shared between threads safely
-   --> tests/ui/compile-fail-3.rs:7:5
-    |
-7   |     thread::spawn(|| {
-    |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
-    |
-    = help: the trait `std::marker::Sync` is not implemented for `*mut _`
-    = note: required because of the requirements on the impl of `std::marker::Send` for `&*mut _`
-    = note: required because it appears within the type `[closure@$DIR/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
+ --> tests/ui/compile-fail-3.rs:7:5
+  |
+7 |     thread::spawn(|| {
+  |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
+  |
+  = help: the trait `std::marker::Sync` is not implemented for `*mut _`
+  = note: required because of the requirements on the impl of `std::marker::Send` for `&*mut _`
+  = note: required because it appears within the type `[closure@$DIR/ui/compile-fail-3.rs:7:19: 9:6 x:&*mut _]`
 "}
 
 test_normalize! {test_strip_path_dependencies "
@@ -167,15 +167,15 @@ For more information about this error, try `rustc --explain E0277`.
 error: could not compile `testing` due to previous error
 " "
 error[E0277]: the trait bound `Thread: serde::de::Deserialize<'_>` is not satisfied
-    --> src/main.rs:2:36
-     |
-2    |     let _ = serde_json::from_str::<std::thread::Thread>(\"???\");
-     |                                    ^^^^^^^^^^^^^^^^^^^ the trait `serde::de::Deserialize<'_>` is not implemented for `Thread`
-     |
-    ::: $CARGO/serde_json-1.0.64/src/de.rs
-     |
-     |     T: de::Deserialize<'a>,
-     |        ------------------- required by this bound in `serde_json::from_str`
+ --> src/main.rs:2:36
+  |
+2 |     let _ = serde_json::from_str::<std::thread::Thread>(\"???\");
+  |                                    ^^^^^^^^^^^^^^^^^^^ the trait `serde::de::Deserialize<'_>` is not implemented for `Thread`
+  |
+ ::: $CARGO/serde_json-1.0.64/src/de.rs
+  |
+  |     T: de::Deserialize<'a>,
+  |        ------------------- required by this bound in `serde_json::from_str`
 "}
 
 test_normalize! {test_traits_must_be_implemented "
@@ -222,46 +222,46 @@ note: the following traits must be implemented
     = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
 " "
 error[E0599]: the method `anyhow_kind` exists for reference `&Error`, but its trait bounds were not satisfied
-   --> src/main.rs:7:13
-    |
-4   | struct Error;
-    | -------------
-    | |
-    | doesn't satisfy `Error: Into<anyhow::Error>`
-    | doesn't satisfy `Error: anyhow::private::kind::TraitKind`
-    | doesn't satisfy `Error: std::fmt::Display`
+ --> src/main.rs:7:13
+  |
+4 | struct Error;
+  | -------------
+  | |
+  | doesn't satisfy `Error: Into<anyhow::Error>`
+  | doesn't satisfy `Error: anyhow::private::kind::TraitKind`
+  | doesn't satisfy `Error: std::fmt::Display`
 ...
-7   |     let _ = anyhow!(Error);
-    |             ^^^^^^^^^^^^^^ method cannot be called on `&Error` due to unsatisfied trait bounds
-    |
-    = note: the following trait bounds were not satisfied:
-            `Error: Into<anyhow::Error>`
-            which is required by `Error: anyhow::private::kind::TraitKind`
-            `Error: std::fmt::Display`
-            which is required by `&Error: anyhow::private::kind::AdhocKind`
-            `&Error: Into<anyhow::Error>`
-            which is required by `&Error: anyhow::private::kind::TraitKind`
+7 |     let _ = anyhow!(Error);
+  |             ^^^^^^^^^^^^^^ method cannot be called on `&Error` due to unsatisfied trait bounds
+  |
+  = note: the following trait bounds were not satisfied:
+          `Error: Into<anyhow::Error>`
+          which is required by `Error: anyhow::private::kind::TraitKind`
+          `Error: std::fmt::Display`
+          which is required by `&Error: anyhow::private::kind::AdhocKind`
+          `&Error: Into<anyhow::Error>`
+          which is required by `&Error: anyhow::private::kind::TraitKind`
 note: the following traits must be implemented
-   --> $RUST/core/src/convert/mod.rs
-    |
-    | / pub trait Into<T>: Sized {
-    | |     /// Performs the conversion.
-    | |     #[stable(feature = \"rust1\", since = \"1.0.0\")]
-    | |     fn into(self) -> T;
-    | | }
-    | |_^
-    |
-   ::: $RUST/core/src/fmt/mod.rs
-    |
-    | / pub trait Display {
-    | |     /// Formats the value using the given formatter.
-    | |     ///
-    | |     /// # Examples
-...   |
-    | |     fn fmt(&self, f: &mut Formatter<'_>) -> Result;
-    | | }
-    | |_^
-    = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
+ --> $RUST/core/src/convert/mod.rs
+  |
+  | / pub trait Into<T>: Sized {
+  | |     /// Performs the conversion.
+  | |     #[stable(feature = \"rust1\", since = \"1.0.0\")]
+  | |     fn into(self) -> T;
+  | | }
+  | |_^
+  |
+ ::: $RUST/core/src/fmt/mod.rs
+  |
+  | / pub trait Display {
+  | |     /// Formats the value using the given formatter.
+  | |     ///
+  | |     /// # Examples
+... |
+  | |     fn fmt(&self, f: &mut Formatter<'_>) -> Result;
+  | | }
+  | |_^
+  = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
 "}
 
 test_normalize! {test_pyo3_url
@@ -302,20 +302,18 @@ note: required by a bound in `dropshot::Query`
 547 | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
     |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
 "
-// TODO: it would be nice to also unindent the column of `|` by one column.
-// https://github.com/dtolnay/trybuild/issues/86
 "
 error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
-   --> tests/fail/bad_endpoint4.rs:24:14
-    |
-24  |     _params: Query<QueryParams>,
-    |              ^^^^^^^^^^^^^^^^^^ the trait `schemars::JsonSchema` is not implemented for `QueryParams`
-    |
+  --> tests/fail/bad_endpoint4.rs:24:14
+   |
+24 |     _params: Query<QueryParams>,
+   |              ^^^^^^^^^^^^^^^^^^ the trait `schemars::JsonSchema` is not implemented for `QueryParams`
+   |
 note: required by a bound in `dropshot::Query`
-   --> src/handler.rs
-    |
-    | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
-    |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
+  --> src/handler.rs
+   |
+   | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
+   |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
 "}
 
 test_normalize! {test_uniffi_out_dir
@@ -334,14 +332,14 @@ error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
     = note: required by `try_lift`
 " "
 error[E0277]: the trait bound `Arc<Counter>: FfiConverter` is not satisfied
-   --> $OUT_DIR[uniffi_uitests]/counter.uniffi.rs
-    |
-    |             match <std::sync::Arc<Counter> as uniffi::FfiConverter>::try_lift(ptr) {
-    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `FfiConverter` is not implemented for `Arc<Counter>`
-    |
-    = help: the following implementations were found:
-              <Arc<T> as FfiConverter>
-    = note: required by `try_lift`
+ --> $OUT_DIR[uniffi_uitests]/counter.uniffi.rs
+  |
+  |             match <std::sync::Arc<Counter> as uniffi::FfiConverter>::try_lift(ptr) {
+  |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `FfiConverter` is not implemented for `Arc<Counter>`
+  |
+  = help: the following implementations were found:
+            <Arc<T> as FfiConverter>
+  = note: required by `try_lift`
 "}
 
 test_normalize! {test_proc_macro_panic
