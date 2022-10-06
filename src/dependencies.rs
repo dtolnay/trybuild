@@ -129,6 +129,8 @@ pub struct Dependency {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<Directory>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub optional: bool,
     #[serde(
         rename = "default-features",
         default = "get_true",
@@ -270,6 +272,7 @@ impl<'de> Deserialize<'de> for Dependency {
                 Ok(Dependency {
                     version: Some(s.to_owned()),
                     path: None,
+                    optional: false,
                     default_features: true,
                     features: Vec::new(),
                     git: None,

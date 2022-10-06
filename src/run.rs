@@ -220,9 +220,35 @@ impl Runner {
                 .ok_or(Error::NoWorkspaceManifest)?,
         };
 
+        let mut dependencies = Map::new();
+        dependencies.extend(source_manifest.dependencies);
+        dependencies.extend(source_manifest.dev_dependencies);
+        dependencies.insert(
+            crate_name.clone(),
+            Dependency {
+                version: None,
+                path: Some(source_dir.clone()),
+                optional: false,
+                default_features: false,
+                features: Vec::new(),
+                git: None,
+                branch: None,
+                tag: None,
+                rev: None,
+                workspace: false,
+                rest: Map::new(),
+            },
+        );
+
         let mut features = source_manifest.features;
         for (feature, enables) in &mut features {
-            enables.retain(|en| en.starts_with("dep:"));
+            enables.retain(|en| {
+                if let Some(dep_name) = en.strip_prefix("dep:") {
+                    dependencies.get(dep_name).map_or(false, |dep| dep.optional)
+                } else {
+                    false
+                }
+            });
             enables.insert(0, format!("{}/{}", crate_name, feature));
         }
 
@@ -235,7 +261,7 @@ impl Runner {
                 publish: false,
             },
             features,
-            dependencies: Map::new(),
+            dependencies,
             target: source_manifest.target,
             bins: Vec::new(),
             workspace: Some(Workspace {
@@ -247,29 +273,10 @@ impl Runner {
             replace: workspace_manifest.replace,
         };
 
-        manifest.dependencies.extend(source_manifest.dependencies);
-        manifest
-            .dependencies
-            .extend(source_manifest.dev_dependencies);
         for target in manifest.target.values_mut() {
             let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
             target.dependencies.extend(dev_dependencies);
         }
-        manifest.dependencies.insert(
-            crate_name,
-            Dependency {
-                version: None,
-                path: Some(source_dir.clone()),
-                default_features: false,
-                features: Vec::new(),
-                git: None,
-                branch: None,
-                tag: None,
-                rev: None,
-                workspace: false,
-                rest: Map::new(),
-            },
-        );
 
         manifest.bins.push(Bin {
             name: Name(project_name.to_owned()),
