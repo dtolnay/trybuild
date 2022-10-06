@@ -220,14 +220,11 @@ impl Runner {
                 .ok_or(Error::NoWorkspaceManifest)?,
         };
 
-        let features = source_manifest
-            .features
-            .keys()
-            .map(|feature| {
-                let enable = format!("{}/{}", crate_name, feature);
-                (feature.clone(), vec![enable])
-            })
-            .collect();
+        let mut features = source_manifest.features;
+        for (feature, enables) in &mut features {
+            enables.retain(|en| en.starts_with("dep:"));
+            enables.insert(0, format!("{}/{}", crate_name, feature));
+        }
 
         let mut manifest = Manifest {
             package: Package {
