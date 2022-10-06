@@ -240,14 +240,30 @@ impl Runner {
             },
         );
 
+        let mut targets = source_manifest.target;
+        for target in targets.values_mut() {
+            let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
+            target.dependencies.extend(dev_dependencies);
+        }
+
         let mut features = source_manifest.features;
         for (feature, enables) in &mut features {
             enables.retain(|en| {
-                if let Some(dep_name) = en.strip_prefix("dep:") {
-                    dependencies.get(dep_name).map_or(false, |dep| dep.optional)
-                } else {
-                    false
+                let dep_name = match en.strip_prefix("dep:") {
+                    Some(dep_name) => dep_name,
+                    None => return false,
+                };
+                if let Some(Dependency { optional: true, .. }) = dependencies.get(dep_name) {
+                    return true;
                 }
+                for target in targets.values() {
+                    if let Some(Dependency { optional: true, .. }) =
+                        target.dependencies.get(dep_name)
+                    {
+                        return true;
+                    }
+                }
+                false
             });
             enables.insert(0, format!("{}/{}", crate_name, feature));
         }
@@ -262,7 +278,7 @@ impl Runner {
             },
             features,
             dependencies,
-            target: source_manifest.target,
+            target: targets,
             bins: Vec::new(),
             workspace: Some(Workspace {
                 dependencies: workspace_manifest.workspace.dependencies,
@@ -272,11 +288,6 @@ impl Runner {
             patch: workspace_manifest.patch,
             replace: workspace_manifest.replace,
         };
-
-        for target in manifest.target.values_mut() {
-            let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
-            target.dependencies.extend(dev_dependencies);
-        }
 
         manifest.bins.push(Bin {
             name: Name(project_name.to_owned()),
