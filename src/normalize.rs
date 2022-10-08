@@ -61,6 +61,7 @@ pub fn diagnostics(output: &str, context: Context) -> Variations {
         RelativeToDir,
         LinesOutsideInputFile,
         Unindent,
+        AndOther,
     ]
     .iter()
     .map(|normalization| apply(&output, *normalization, context))
@@ -100,6 +101,7 @@ enum Normalization {
     RelativeToDir,
     LinesOutsideInputFile,
     Unindent,
+    AndOther,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -349,6 +351,15 @@ impl<'a> Filter<'a> {
             &self.context.workspace.to_string_lossy(),
             "$WORKSPACE/",
         );
+
+        if self.normalization >= AndOther {
+            // Replace any "and 123 others" with "and $COUNT others"
+            if line.trim_start().starts_with("and") && line.trim_end().ends_with("others") {
+                let start = line.find("and").unwrap() + 4;
+                let end = line.find("others").unwrap() - 1;
+                line.replace_range(start..end, "$COUNT");
+            }
+        }
 
         Some(line)
     }
