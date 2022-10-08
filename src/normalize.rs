@@ -17,20 +17,6 @@ pub struct Context<'a> {
     pub path_dependencies: &'a [PathDependency],
 }
 
-pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
-    let bytes = output.as_ref();
-    let mut normalized = String::from_utf8_lossy(bytes).into_owned();
-
-    let len = normalized.trim_end().len();
-    normalized.truncate(len);
-
-    if !normalized.is_empty() {
-        normalized.push('\n');
-    }
-
-    normalized
-}
-
 /// For a given compiler output, produces the set of saved outputs against which
 /// the compiler's output would be considered correct. If the test's saved
 /// stderr file is identical to any one of these variations, the test will pass.
@@ -107,6 +93,20 @@ enum Normalization {
 }
 
 use self::Normalization::*;
+
+pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
+    let bytes = output.as_ref();
+    let mut normalized = String::from_utf8_lossy(bytes).into_owned();
+
+    let len = normalized.trim_end().len();
+    normalized.truncate(len);
+
+    if !normalized.is_empty() {
+        normalized.push('\n');
+    }
+
+    normalized
+}
 
 fn apply(original: &str, normalization: Normalization, context: Context) -> String {
     let mut normalized = String::new();
