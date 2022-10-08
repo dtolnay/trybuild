@@ -2,6 +2,7 @@
 #[path = "tests.rs"]
 mod tests;
 
+use self::Normalization::*;
 use crate::directory::Directory;
 use crate::run::PathDependency;
 use std::cmp;
@@ -17,61 +18,20 @@ pub struct Context<'a> {
     pub path_dependencies: &'a [PathDependency],
 }
 
-/// For a given compiler output, produces the set of saved outputs against which
-/// the compiler's output would be considered correct. If the test's saved
-/// stderr file is identical to any one of these variations, the test will pass.
-///
-/// This is a set rather than just one normalized output in order to avoid
-/// breaking existing tests when introducing new normalization steps. Someone
-/// may have saved stderr snapshots with an older version of trybuild, and those
-/// tests need to continue to pass with newer versions of trybuild.
-///
-/// There is one "preferred" variation which is what we print when the stderr
-/// file is absent or not a match.
-pub fn diagnostics(output: &str, context: Context) -> Variations {
-    let output = output.replace("\r\n", "\n");
+macro_rules! normalizations {
+    ($($name:ident,)*) => {
+        #[derive(PartialOrd, PartialEq, Copy, Clone)]
+        enum Normalization {
+            $($name,)*
+        }
 
-    let variations = [
-        Basic,
-        StripCouldNotCompile,
-        StripCouldNotCompile2,
-        StripForMoreInformation,
-        StripForMoreInformation2,
-        TrimEnd,
-        RustLib,
-        TypeDirBackslash,
-        WorkspaceLines,
-        PathDependencies,
-        CargoRegistry,
-        ArrowOtherCrate,
-        RelativeToDir,
-        LinesOutsideInputFile,
-        Unindent,
-        AndOthers,
-    ]
-    .iter()
-    .map(|normalization| apply(&output, *normalization, context))
-    .collect();
-
-    Variations { variations }
+        impl Normalization {
+            const ALL: &'static [Self] = &[$($name,)*];
+        }
+    };
 }
 
-pub struct Variations {
-    variations: Vec<String>,
-}
-
-impl Variations {
-    pub fn preferred(&self) -> &str {
-        self.variations.last().unwrap()
-    }
-
-    pub fn any<F: FnMut(&str) -> bool>(&self, mut f: F) -> bool {
-        self.variations.iter().any(|stderr| f(stderr))
-    }
-}
-
-#[derive(PartialOrd, PartialEq, Copy, Clone)]
-enum Normalization {
+normalizations! {
     Basic,
     StripCouldNotCompile,
     StripCouldNotCompile2,
@@ -92,7 +52,41 @@ enum Normalization {
     // snapshots saved before your normalization change remain passing.
 }
 
-use self::Normalization::*;
+/// For a given compiler output, produces the set of saved outputs against which
+/// the compiler's output would be considered correct. If the test's saved
+/// stderr file is identical to any one of these variations, the test will pass.
+///
+/// This is a set rather than just one normalized output in order to avoid
+/// breaking existing tests when introducing new normalization steps. Someone
+/// may have saved stderr snapshots with an older version of trybuild, and those
+/// tests need to continue to pass with newer versions of trybuild.
+///
+/// There is one "preferred" variation which is what we print when the stderr
+/// file is absent or not a match.
+pub fn diagnostics(output: &str, context: Context) -> Variations {
+    let output = output.replace("\r\n", "\n");
+
+    let variations = Normalization::ALL
+        .iter()
+        .map(|normalization| apply(&output, *normalization, context))
+        .collect();
+
+    Variations { variations }
+}
+
+pub struct Variations {
+    variations: Vec<String>,
+}
+
+impl Variations {
+    pub fn preferred(&self) -> &str {
+        self.variations.last().unwrap()
+    }
+
+    pub fn any<F: FnMut(&str) -> bool>(&self, mut f: F) -> bool {
+        self.variations.iter().any(|stderr| f(stderr))
+    }
+}
 
 pub fn trim<S: AsRef<[u8]>>(output: S) -> String {
     let bytes = output.as_ref();
