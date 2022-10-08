@@ -346,14 +346,13 @@ impl<'a> Filter<'a> {
 
         if self.normalization >= AndOthers {
             let trim_start = line.trim_start();
-            if trim_start.starts_with("and ")
-                && line.ends_with(" others")
-                && trim_start["and ".len()..trim_start.len() - " others".len()]
-                    .bytes()
-                    .all(|b| b.is_ascii_digit())
-            {
+            if trim_start.starts_with("and ") && line.ends_with(" others") {
                 let indent = line.len() - trim_start.len();
-                line.replace_range(indent.., "and $N others");
+                let num_start = indent + "and ".len();
+                let num_end = line.len() - " others".len();
+                if line[num_start..num_end].bytes().all(|b| b.is_ascii_digit()) {
+                    line.replace_range(num_start..num_end, "$N");
+                }
             }
         }
 
