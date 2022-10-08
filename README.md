@@ -32,7 +32,7 @@ misuse of non-macro APIs.
 trybuild = "1.0"
 ```
 
-*Compiler support: requires rustc 1.36+*
+*Compiler support: requires rustc 1.45+*
 
 <br>
 
