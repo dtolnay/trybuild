@@ -394,5 +394,5 @@ error[E0277]: no implementation for `u8 >> &str`
             <&'a i128 as Shr<isize>>
             <&'a i128 as Shr<u128>>
             <&'a i128 as Shr<u16>>
-          and $COUNT others
+          and $N others
 "}
