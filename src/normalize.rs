@@ -344,7 +344,9 @@ impl<'a> Filter<'a> {
                 let indent = line.len() - trim_start.len();
                 let num_start = indent + "and ".len();
                 let num_end = line.len() - " others".len();
-                if line[num_start..num_end].bytes().all(|b| b.is_ascii_digit()) {
+                if num_start < num_end
+                    && line[num_start..num_end].bytes().all(|b| b.is_ascii_digit())
+                {
                     line.replace_range(num_start..num_end, "$N");
                 }
             }
