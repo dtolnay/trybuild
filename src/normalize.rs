@@ -270,7 +270,7 @@ impl<'a> Filter<'a> {
                 if let Some(pos) = line.find("/registry/src/github.com-") {
                     let start_cargo = line.find(prefix).unwrap() + 4;
                     let end_cargo = pos + 41;
-                    if end_cargo < line.len() {
+                    if line.is_char_boundary(end_cargo) {
                         // ::: $CARGO/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
                         line.replace_range(start_cargo..end_cargo, "$CARGO");
                         other_crate = true;
