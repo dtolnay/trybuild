@@ -242,7 +242,7 @@ impl Runner {
 
         let mut targets = source_manifest.target;
         for target in targets.values_mut() {
-            let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
+            let dev_dependencies = mem::take(&mut target.dev_dependencies);
             target.dependencies.extend(dev_dependencies);
         }
 

@@ -522,8 +522,8 @@ fn indented_line_kind(line: &str) -> IndentedLineKind {
     }
 
     let is_space = |b: &u8| *b == b' ';
-    if line.starts_with("... ") {
-        let spaces = line[4..].bytes().take_while(is_space).count();
+    if let Some(rest) = line.strip_prefix("... ") {
+        let spaces = rest.bytes().take_while(is_space).count();
         return IndentedLineKind::Code(spaces);
     }
 

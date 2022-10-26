@@ -218,6 +218,7 @@
     clippy::let_underscore_drop,
     clippy::manual_assert,
     clippy::manual_range_contains,
+    clippy::match_like_matches_macro,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::needless_pass_by_value,
