@@ -280,7 +280,9 @@ impl Runner {
                 }
                 false
             });
-            enables.insert(0, format!("{}/{}", crate_name, feature));
+            if has_lib_target {
+                enables.insert(0, format!("{}/{}", crate_name, feature));
+            }
         }
 
         let mut manifest = Manifest {
