@@ -1,4 +1,4 @@
-use crate::cargo::{self, Metadata};
+use crate::cargo::{self, Metadata, PackageMetadata};
 use crate::dependencies::{self, Dependency, EditionOrInherit};
 use crate::directory::Directory;
 use crate::env::Update;
@@ -155,6 +155,7 @@ impl Runner {
             &workspace,
             &project_name,
             &source_dir,
+            &packages,
             tests,
             source_manifest,
         )?;
@@ -205,6 +206,7 @@ impl Runner {
         workspace: &Directory,
         project_name: &str,
         source_dir: &Directory,
+        packages: &[PackageMetadata],
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
     ) -> Result<Manifest> {
@@ -223,22 +225,35 @@ impl Runner {
         let mut dependencies = Map::new();
         dependencies.extend(source_manifest.dependencies);
         dependencies.extend(source_manifest.dev_dependencies);
-        dependencies.insert(
-            crate_name.clone(),
-            Dependency {
-                version: None,
-                path: Some(source_dir.clone()),
-                optional: false,
-                default_features: false,
-                features: Vec::new(),
-                git: None,
-                branch: None,
-                tag: None,
-                rev: None,
-                workspace: false,
-                rest: Map::new(),
-            },
-        );
+
+        let cargo_toml_path = source_dir.join("Cargo.toml");
+        let mut has_lib_target = true;
+        for package_metadata in packages {
+            if package_metadata.manifest_path == cargo_toml_path {
+                has_lib_target = package_metadata
+                    .targets
+                    .iter()
+                    .any(|target| target.crate_types != ["bin"]);
+            }
+        }
+        if has_lib_target {
+            dependencies.insert(
+                crate_name.clone(),
+                Dependency {
+                    version: None,
+                    path: Some(source_dir.clone()),
+                    optional: false,
+                    default_features: false,
+                    features: Vec::new(),
+                    git: None,
+                    branch: None,
+                    tag: None,
+                    rev: None,
+                    workspace: false,
+                    rest: Map::new(),
+                },
+            );
+        }
 
         let mut targets = source_manifest.target;
         for target in targets.values_mut() {
@@ -265,7 +280,9 @@ impl Runner {
                 }
                 false
             });
-            enables.insert(0, format!("{}/{}", crate_name, feature));
+            if has_lib_target {
+                enables.insert(0, format!("{}/{}", crate_name, feature));
+            }
         }
 
         let mut manifest = Manifest {
