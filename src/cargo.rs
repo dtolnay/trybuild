@@ -12,12 +12,19 @@ use std::{env, fs, iter};
 pub struct Metadata {
     pub target_directory: Directory,
     pub workspace_root: Directory,
-    pub packages: Vec<Package>,
+    pub packages: Vec<PackageMetadata>,
 }
 
 #[derive(Deserialize)]
-pub struct Package {
+pub struct PackageMetadata {
     pub name: String,
+    pub targets: Vec<BuildTarget>,
+    pub manifest_path: PathBuf,
+}
+
+#[derive(Deserialize)]
+pub struct BuildTarget {
+    pub crate_types: Vec<String>,
 }
 
 fn raw_cargo() -> Command {
