@@ -48,6 +48,7 @@ normalizations! {
     LinesOutsideInputFile,
     Unindent,
     AndOthers,
+    StripLongTypeNameFiles,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -353,6 +354,14 @@ impl<'a> Filter<'a> {
                 {
                     line.replace_range(num_start..num_end, "$N");
                 }
+            }
+        }
+
+        if self.normalization >= StripLongTypeNameFiles {
+            let trimmed_line = line.trim_start();
+            let trimmed_line = trimmed_line.strip_prefix("= note: ").unwrap_or(trimmed_line);
+            if trimmed_line.starts_with("the full type name has been written to") {
+                return None;
             }
         }
 
