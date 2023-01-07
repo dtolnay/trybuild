@@ -10,7 +10,7 @@ use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, rustflags, Expected, Runner, Test};
 use serde_derive::Deserialize;
-use std::collections::BTreeMap as Map;
+use std::collections::{BTreeMap as Map, BTreeSet as Set};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File};
@@ -619,6 +619,7 @@ fn parse_cargo_json(
     let mut map = Map::new();
     let mut nonmessage_stdout = String::new();
     let mut remaining = &*String::from_utf8_lossy(stdout);
+    let mut seen = Set::new();
     while !remaining.is_empty() {
         let begin = match remaining.find("{\"reason\":") {
             Some(begin) => begin,
@@ -632,6 +633,13 @@ fn parse_cargo_json(
         };
         let (message, rest) = rest.split_at(len);
         remaining = rest;
+        if !seen.insert(message) {
+            // Discard duplicate messages. This might no longer be necessary
+            // after https://github.com/rust-lang/rust/issues/106571 is fixed.
+            // Normally rustc would filter duplicates itself and I think this is
+            // a short-lived bug.
+            continue;
+        }
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" {
                 let (name, test) = match path_map.get(&de.target.src_path) {
