@@ -631,6 +631,7 @@ fn parse_cargo_json(
             None => rest.len(),
         };
         let (message, rest) = rest.split_at(len);
+        remaining = rest;
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" {
                 let (name, test) = match path_map.get(&de.target.src_path) {
@@ -657,7 +658,6 @@ fn parse_cargo_json(
                 entry.stderr.concat(&normalized);
             }
         }
-        remaining = rest;
     }
     nonmessage_stdout.push_str(remaining);
     ParsedOutputs {
