@@ -26,7 +26,15 @@ macro_rules! normalizations {
         }
 
         impl Normalization {
-            const ALL: &'static [Self] = &[$($name,)*];
+            const ALL: &'static [Self] = &[$($name),*];
+        }
+
+        impl Default for Variations {
+            fn default() -> Self {
+                Variations {
+                    variations: [$(($name, String::new()).1),*],
+                }
+            }
         }
     };
 }
@@ -67,16 +75,16 @@ normalizations! {
 pub fn diagnostics(output: &str, context: Context) -> Variations {
     let output = output.replace("\r\n", "\n");
 
-    let variations = Normalization::ALL
-        .iter()
-        .map(|normalization| apply(&output, *normalization, context))
-        .collect();
+    let mut result = Variations::default();
+    for (i, normalization) in Normalization::ALL.iter().enumerate() {
+        result.variations[i] = apply(&output, *normalization, context);
+    }
 
-    Variations { variations }
+    result
 }
 
 pub struct Variations {
-    variations: Vec<String>,
+    variations: [String; Normalization::ALL.len()],
 }
 
 impl Variations {
