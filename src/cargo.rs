@@ -39,6 +39,7 @@ fn cargo(project: &Project) -> Command {
     cmd.current_dir(&project.dir);
     cmd.envs(cargo_target_dir(project));
     cmd.envs(rustflags::envs());
+    cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
     cmd
 }
