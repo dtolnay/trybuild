@@ -359,7 +359,9 @@ impl<'a> Filter<'a> {
 
         if self.normalization >= StripLongTypeNameFiles {
             let trimmed_line = line.trim_start();
-            let trimmed_line = trimmed_line.strip_prefix("= note: ").unwrap_or(trimmed_line);
+            let trimmed_line = trimmed_line
+                .strip_prefix("= note: ")
+                .unwrap_or(trimmed_line);
             if trimmed_line.starts_with("the full type name has been written to") {
                 return None;
             }
