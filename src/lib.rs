@@ -223,6 +223,7 @@
     clippy::needless_pass_by_value,
     clippy::non_ascii_literal,
     clippy::range_plus_one,
+    clippy::similar_names,
     clippy::single_match_else,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
