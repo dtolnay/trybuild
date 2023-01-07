@@ -336,8 +336,15 @@ impl Runner {
             failures: 0,
             created_wip: 0,
         };
+
+        let mut path_map = Map::new();
+        for t in &tests {
+            let src_path = project.source_dir.join(&t.test.path);
+            path_map.insert(src_path, (&t.name, &t.test));
+        }
+
         let output = cargo::build_all_tests(project)?;
-        let parsed = parse_cargo_json(&output.stdout);
+        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
         let fallback = Stderr::default();
 
         for mut t in tests {
@@ -379,9 +386,12 @@ impl Test {
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
 
-        let output = cargo::build_test(project, name)?;
-        let parsed = parse_cargo_json(&output.stdout);
+        let mut path_map = Map::new();
         let src_path = project.source_dir.join(&self.path);
+        path_map.insert(src_path.clone(), (name, self));
+
+        let output = cargo::build_test(project, name)?;
+        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
         let fallback = Stderr::default();
         let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
         self.check(project, name, this_test, &parsed.stdout)
@@ -394,25 +404,19 @@ impl Test {
         result: &Stderr,
         build_stdout: &str,
     ) -> Result<Outcome> {
-        let success = result.success;
-        let stderr = normalize::diagnostics(
-            &result.stderr,
-            Context {
-                krate: &name.0,
-                source_dir: &project.source_dir,
-                workspace: &project.workspace,
-                input_file: &self.path,
-                target_dir: &project.target_dir,
-                path_dependencies: &project.path_dependencies,
-            },
-        );
-
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
             Expected::CompileFail => Test::check_compile_fail,
         };
 
-        check(self, project, name, success, build_stdout, stderr)
+        check(
+            self,
+            project,
+            name,
+            result.success,
+            build_stdout,
+            &result.stderr,
+        )
     }
 
     fn check_pass(
@@ -421,7 +425,7 @@ impl Test {
         name: &Name,
         success: bool,
         build_stdout: &str,
-        variations: Variations,
+        variations: &Variations,
     ) -> Result<Outcome> {
         let preferred = variations.preferred();
         if !success {
@@ -445,7 +449,7 @@ impl Test {
         _name: &Name,
         success: bool,
         build_stdout: &str,
-        variations: Variations,
+        variations: &Variations,
     ) -> Result<Outcome> {
         let preferred = variations.preferred();
 
@@ -595,19 +599,23 @@ struct ParsedOutputs {
 
 struct Stderr {
     success: bool,
-    stderr: String,
+    stderr: Variations,
 }
 
 impl Default for Stderr {
     fn default() -> Self {
         Stderr {
             success: true,
-            stderr: String::new(),
+            stderr: Variations::default(),
         }
     }
 }
 
-fn parse_cargo_json(stdout: &[u8]) -> ParsedOutputs {
+fn parse_cargo_json(
+    project: &Project,
+    stdout: &[u8],
+    path_map: &Map<PathBuf, (&Name, &Test)>,
+) -> ParsedOutputs {
     let mut map = Map::new();
     let mut nonmessage_stdout = String::new();
     let mut remaining = &*String::from_utf8_lossy(stdout);
@@ -625,13 +633,28 @@ fn parse_cargo_json(stdout: &[u8]) -> ParsedOutputs {
         let (message, rest) = rest.split_at(len);
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" {
+                let (name, test) = match path_map.get(&de.target.src_path) {
+                    Some(test) => test,
+                    None => continue,
+                };
                 let mut entry = map
                     .entry(de.target.src_path)
                     .or_insert_with(Stderr::default);
                 if de.message.level == "error" {
                     entry.success = false;
                 }
-                entry.stderr.push_str(&de.message.rendered);
+                let normalized = normalize::diagnostics(
+                    &de.message.rendered,
+                    Context {
+                        krate: &name.0,
+                        source_dir: &project.source_dir,
+                        workspace: &project.workspace,
+                        input_file: &test.path,
+                        target_dir: &project.target_dir,
+                        path_dependencies: &project.path_dependencies,
+                    },
+                );
+                entry.stderr.concat(&normalized);
             }
         }
         remaining = rest;
