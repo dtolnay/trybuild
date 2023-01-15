@@ -147,7 +147,7 @@ impl Runner {
             .collect();
 
         let crate_name = &source_manifest.package.name;
-        let project_dir = path!(target_dir / "tests" / crate_name /);
+        let project_dir = path!(target_dir / "tests" / "trybuild" / crate_name /);
         fs::create_dir_all(&project_dir)?;
 
         let project_name = format!("{}-tests", crate_name);
