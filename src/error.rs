@@ -20,8 +20,7 @@ pub enum Error {
     ReadStderr(io::Error),
     RunFailed,
     ShouldNotHaveCompiled,
-    TomlDe(toml::de::Error),
-    TomlSer(toml::ser::Error),
+    Toml(basic_toml::Error),
     UpdateVar(OsString),
     WriteStderr(io::Error),
 }
@@ -49,8 +48,7 @@ impl Display for Error {
             ShouldNotHaveCompiled => {
                 write!(f, "expected test case to fail to compile, but it succeeded")
             }
-            TomlDe(e) => write!(f, "{}", e),
-            TomlSer(e) => write!(f, "{}", e),
+            Toml(e) => write!(f, "{}", e),
             UpdateVar(var) => write!(
                 f,
                 "unrecognized value of TRYBUILD: {:?}",
@@ -90,14 +88,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<toml::de::Error> for Error {
-    fn from(err: toml::de::Error) -> Self {
-        Error::TomlDe(err)
-    }
-}
-
-impl From<toml::ser::Error> for Error {
-    fn from(err: toml::ser::Error) -> Self {
-        Error::TomlSer(err)
+impl From<basic_toml::Error> for Error {
+    fn from(err: basic_toml::Error) -> Self {
+        Error::Toml(err)
     }
 }
