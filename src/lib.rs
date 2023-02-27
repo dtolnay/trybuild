@@ -215,6 +215,7 @@
     clippy::doc_markdown,
     clippy::enum_glob_use,
     clippy::iter_not_returning_iterator, // https://github.com/rust-lang/rust-clippy/issues/8285
+    clippy::let_underscore_untyped, // https://github.com/rust-lang/rust-clippy/issues/10410
     clippy::manual_assert,
     clippy::manual_range_contains,
     clippy::match_like_matches_macro,
