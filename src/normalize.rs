@@ -282,6 +282,18 @@ impl<'a> Filter<'a> {
                     // ::: $RUST/std/src/net/ip.rs:83:1
                     line.replace_range(line.find(prefix).unwrap() + 4..pos + 25, "$RUST");
                     other_crate = true;
+                } else if let (Some(pos_rustc), Some(pos_library)) =
+                    (line.find("/rustc/"), line.find("/library/"))
+                {
+                    // source: /rustc/c5c7d2b37780dac1092e75f12ab97dd56c30861d/library/core/src/fmt/mod.rs:786:1
+                    // ::: $RUST/core/src/fmt/mod.rs
+                    if pos_library == pos_rustc + 47 {
+                        line.replace_range(
+                            line.find(prefix).unwrap() + 4..pos_library + 8,
+                            "$RUST",
+                        );
+                        other_crate = true;
+                    }
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
