@@ -341,8 +341,7 @@ note: required by a bound in `dropshot::Query`
     |
 547 | pub struct Query<QueryType: DeserializeOwned + JsonSchema + Send + Sync> {
     |                                                ^^^^^^^^^^ required by this bound in `dropshot::Query`
-"
-"
+" "
 error[E0277]: the trait bound `QueryParams: schemars::JsonSchema` is not satisfied
   --> tests/fail/bad_endpoint4.rs:24:14
    |
@@ -463,5 +462,4 @@ note: `test` defined here
    |
 16 | fn test<T:Dot> (n:isize, i:isize, first:T, second:T) ->isize {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-"
-}
+"}
