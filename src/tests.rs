@@ -264,8 +264,7 @@ note: the following traits must be implemented
   = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
 "}
 
-test_normalize! {rust_lib_with_githash
-"
+test_normalize! {test_rust_lib_with_githash "
 error[E0599]: the method `to_cxx_exception` exists for reference `&NonError`, but its trait bounds were not satisfied
  --> tests/ui/result_no_display.rs:4:19
   |
