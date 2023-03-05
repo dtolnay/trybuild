@@ -187,7 +187,7 @@ impl Runner {
         let config_toml = basic_toml::to_string(&config)?;
 
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
-        fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
+        fs::write(path!(project.dir / ".cargo" / "config.toml"), config_toml)?;
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
 
         let main_rs = b"\
