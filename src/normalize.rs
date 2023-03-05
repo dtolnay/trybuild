@@ -210,9 +210,7 @@ impl<'a> Filter<'a> {
                         }
                     } else if component.len() > 17
                         && component.rfind('-') == Some(component.len() - 17)
-                        && component[component.len() - 16..]
-                            .bytes()
-                            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+                        && is_ascii_lowercase_hex(&component[component.len() - 16..])
                     {
                         out_dir_crate_name = Some(&component[..component.len() - 17]);
                     } else {
@@ -405,6 +403,10 @@ impl<'a> Filter<'a> {
 
         Some(line)
     }
+}
+
+fn is_ascii_lowercase_hex(s: &str) -> bool {
+    s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 // "10 | T: Send,"  ->  "   | T: Send,"
