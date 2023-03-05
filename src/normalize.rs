@@ -294,14 +294,16 @@ impl<'a> Filter<'a> {
             }
             if self.normalization >= CargoRegistry && !other_crate {
                 if let Some(pos) = line.find("/registry/src/github.com-") {
+                    let hash_start = pos + 25;
+                    let hash_end = hash_start + 16;
                     if line
-                        .get(pos + 25..pos + 41)
+                        .get(hash_start..hash_end)
                         .map_or(false, is_ascii_lowercase_hex)
-                        && line[pos + 41..].starts_with('/')
+                        && line[hash_end..].starts_with('/')
                     {
                         // --> /home/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
                         // --> $CARGO/serde_json-1.0.64/src/de.rs:2584:8
-                        line.replace_range(indent + 4..pos + 41, "$CARGO");
+                        line.replace_range(indent + 4..hash_end, "$CARGO");
                         other_crate = true;
                     }
                 }
