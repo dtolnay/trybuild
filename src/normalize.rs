@@ -174,13 +174,13 @@ impl<'a> Filter<'a> {
 
         if prefix == Some("--> ") && self.normalization < ArrowOtherCrate {
             if let Some(cut_end) = line.rfind(&['/', '\\'][..]) {
-                let cut_start = line.find('>').unwrap() + 2;
+                let cut_start = indent + 4;
                 line.replace_range(cut_start..cut_end + 1, "$DIR/");
                 return Some(line);
             }
         }
 
-        if let Some(prefix) = prefix {
+        if prefix.is_some() {
             line = line.replace('\\', "/");
             let line_lower = line.to_ascii_lowercase();
             let target_dir_pat = self
@@ -277,12 +277,12 @@ impl<'a> Filter<'a> {
                 if let Some(pos) = line.find("/rustlib/src/rust/src/") {
                     // --> /home/.rustup/toolchains/nightly/lib/rustlib/src/rust/src/libstd/net/ip.rs:83:1
                     // --> $RUST/src/libstd/net/ip.rs:83:1
-                    line.replace_range(line.find(prefix).unwrap() + 4..pos + 17, "$RUST");
+                    line.replace_range(indent + 4..pos + 17, "$RUST");
                     other_crate = true;
                 } else if let Some(pos) = line.find("/rustlib/src/rust/library/") {
                     // --> /home/.rustup/toolchains/nightly/lib/rustlib/src/rust/library/std/src/net/ip.rs:83:1
                     // --> $RUST/std/src/net/ip.rs:83:1
-                    line.replace_range(line.find(prefix).unwrap() + 4..pos + 25, "$RUST");
+                    line.replace_range(indent + 4..pos + 25, "$RUST");
                     other_crate = true;
                 } else if let (Some(pos_rustc), Some(pos_library)) =
                     (line.find("/rustc/"), line.find("/library/"))
@@ -290,17 +290,14 @@ impl<'a> Filter<'a> {
                     // --> /rustc/c5c7d2b37780dac1092e75f12ab97dd56c30861e/library/std/src/net/ip.rs:83:1
                     // --> $RUST/std/src/net/ip.rs:83:1
                     if pos_library == pos_rustc + 47 {
-                        line.replace_range(
-                            line.find(prefix).unwrap() + 4..pos_library + 8,
-                            "$RUST",
-                        );
+                        line.replace_range(indent + 4..pos_library + 8, "$RUST");
                         other_crate = true;
                     }
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
                 if let Some(pos) = line.find("/registry/src/github.com-") {
-                    let start_cargo = line.find(prefix).unwrap() + 4;
+                    let start_cargo = indent + 4;
                     let end_cargo = pos + 41;
                     if line.is_char_boundary(end_cargo) {
                         // --> /home/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
