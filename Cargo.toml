@@ -1,6 +1,6 @@
 [package]
 name = "trybuild"
-version = "1.0.78"
+version = "1.0.79"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["development-tools::testing"]
 description = "Test harness for ui tests of compiler diagnostics"
