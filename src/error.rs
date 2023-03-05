@@ -63,10 +63,10 @@ impl Error {
     pub fn already_printed(&self) -> bool {
         use self::Error::*;
 
-        match self {
-            CargoFail | Mismatch | RunFailed | ShouldNotHaveCompiled => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            CargoFail | Mismatch | RunFailed | ShouldNotHaveCompiled
+        )
     }
 }
 

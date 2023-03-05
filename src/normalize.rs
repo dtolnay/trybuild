@@ -210,10 +210,9 @@ impl<'a> Filter<'a> {
                         }
                     } else if component.len() > 17
                         && component.rfind('-') == Some(component.len() - 17)
-                        && component[component.len() - 16..].bytes().all(|b| match b {
-                            b'0'..=b'9' | b'a'..=b'f' => true,
-                            _ => false,
-                        })
+                        && component[component.len() - 16..]
+                            .bytes()
+                            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
                     {
                         out_dir_crate_name = Some(&component[..component.len() - 17]);
                     } else {
