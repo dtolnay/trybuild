@@ -28,6 +28,9 @@ serde_json = "1.0"
 termcolor = "1.0.4"
 basic-toml = "0.1"
 
+[dev-dependencies]
+automod = "1.0"
+
 [lib]
 doc-scrape-examples = false
 
