@@ -294,8 +294,11 @@ impl<'a> Filter<'a> {
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
-                if let Some(pos) = line.find("/registry/src/github.com-") {
-                    let hash_start = pos + 25;
+                if let Some(pos) = line
+                    .find("/registry/src/github.com-")
+                    .or_else(|| line.find("/registry/src/index.crates.io-"))
+                {
+                    let hash_start = pos + line[pos..].find('-').unwrap() + 1;
                     let hash_end = hash_start + 16;
                     if line
                         .get(hash_start..hash_end)
