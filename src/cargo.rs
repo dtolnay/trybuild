@@ -3,20 +3,28 @@ use crate::error::{Error, Result};
 use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
-use serde::Deserialize;
+use serde_derive::Deserialize;
+use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, fs};
+use std::{env, fs, iter};
 
 #[derive(Deserialize)]
 pub struct Metadata {
     pub target_directory: Directory,
     pub workspace_root: Directory,
-    pub packages: Vec<Package>,
+    pub packages: Vec<PackageMetadata>,
 }
 
 #[derive(Deserialize)]
-pub struct Package {
+pub struct PackageMetadata {
     pub name: String,
+    pub targets: Vec<BuildTarget>,
+    pub manifest_path: PathBuf,
+}
+
+#[derive(Deserialize)]
+pub struct BuildTarget {
+    pub crate_types: Vec<String>,
 }
 
 fn raw_cargo() -> Command {
@@ -29,16 +37,34 @@ fn raw_cargo() -> Command {
 fn cargo(project: &Project) -> Command {
     let mut cmd = raw_cargo();
     cmd.current_dir(&project.dir);
-    cmd.env(
-        "CARGO_TARGET_DIR",
-        path!(project.target_dir / "tests" / "target"),
-    );
+    cmd.envs(cargo_target_dir(project));
+    cmd.envs(rustflags::envs());
+    cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
-    rustflags::set_env(&mut cmd);
     cmd
 }
 
-pub fn build_dependencies(project: &Project) -> Result<()> {
+fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, PathBuf)> {
+    iter::once((
+        "CARGO_TARGET_DIR",
+        path!(project.target_dir / "tests" / "trybuild"),
+    ))
+}
+
+pub fn manifest_dir() -> Result<Directory> {
+    if let Some(manifest_dir) = env::var_os("CARGO_MANIFEST_DIR") {
+        return Ok(Directory::from(manifest_dir));
+    }
+    let mut dir = Directory::current()?;
+    loop {
+        if dir.join("Cargo.toml").exists() {
+            return Ok(dir);
+        }
+        dir = dir.parent().ok_or(Error::ProjectDir)?;
+    }
+}
+
+pub fn build_dependencies(project: &mut Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {
         let _ = fs::copy(workspace_cargo_lock, path!(project.dir / "Cargo.lock"));
@@ -46,20 +72,30 @@ pub fn build_dependencies(project: &Project) -> Result<()> {
         let _ = cargo(project).arg("generate-lockfile").status();
     }
 
-    let status = cargo(project)
+    let mut command = cargo(project);
+    command
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())
         .arg("--bin")
         .arg(&project.name)
-        .args(features(project))
-        .status()
-        .map_err(Error::Cargo)?;
+        .args(features(project));
 
-    if status.success() {
-        Ok(())
-    } else {
-        Err(Error::CargoFail)
+    let status = command.status().map_err(Error::Cargo)?;
+    if !status.success() {
+        return Err(Error::CargoFail);
     }
+
+    // Check if this Cargo contains https://github.com/rust-lang/cargo/pull/10383
+    project.keep_going = command
+        .arg("-Zunstable-options")
+        .arg("--keep-going")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false);
+
+    Ok(())
 }
 
 pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
@@ -80,6 +116,31 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .args(features(project))
         .arg("--quiet")
         .arg("--color=never")
+        .arg("--message-format=json")
+        .output()
+        .map_err(Error::Cargo)
+}
+
+pub fn build_all_tests(project: &Project) -> Result<Output> {
+    let _ = cargo(project)
+        .arg("clean")
+        .arg("--package")
+        .arg(&project.name)
+        .arg("--color=never")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+
+    cargo(project)
+        .arg(if project.has_pass { "build" } else { "check" })
+        .args(target())
+        .arg("--bins")
+        .args(features(project))
+        .arg("--quiet")
+        .arg("--color=never")
+        .arg("--message-format=json")
+        .arg("-Zunstable-options")
+        .arg("--keep-going")
         .output()
         .map_err(Error::Cargo)
 }

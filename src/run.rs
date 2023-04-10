@@ -1,20 +1,23 @@
-use crate::cargo::{self, Metadata};
-use crate::dependencies::{self, Dependency};
+use crate::cargo::{self, Metadata, PackageMetadata};
+use crate::dependencies::{self, Dependency, EditionOrInherit};
 use crate::directory::Directory;
 use crate::env::Update;
 use crate::error::{Error, Result};
+use crate::expand::{expand_globs, ExpandedTest};
 use crate::flock::Lock;
 use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
-use crate::{features, rustflags, Expected, FileTest, InlineTest, Runner, Test, TestKind};
-use std::collections::BTreeMap as Map;
+use crate::{features, rustflags, Expected, InlineTest, Runner, Test, TestKind};
+use serde_derive::Deserialize;
+use std::collections::{BTreeMap as Map, BTreeSet as Set};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::str;
 
 #[derive(Debug)]
 pub struct Project {
@@ -29,6 +32,7 @@ pub struct Project {
     pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
+    pub keep_going: bool,
 }
 
 #[derive(Debug)]
@@ -37,15 +41,20 @@ pub struct PathDependency {
     pub normalized_path: Directory,
 }
 
+struct Report {
+    failures: usize,
+    created_wip: usize,
+}
+
 impl Runner {
     pub fn run(&mut self) {
         let mut tests = expand_globs(&self.tests);
         filter(&mut tests);
 
         let (project, _lock) = (|| {
-            let project = self.prepare(&tests)?;
+            let mut project = self.prepare(&tests)?;
             let lock = Lock::acquire(path!(project.dir / ".lock"));
-            self.write(&project)?;
+            self.write(&mut project)?;
             Ok((project, lock))
         })()
         .unwrap_or_else(|err| {
@@ -56,23 +65,47 @@ impl Runner {
         print!("\n\n");
 
         let len = tests.len();
-        let mut failures = 0;
+        let mut report = Report {
+            failures: 0,
+            created_wip: 0,
+        };
 
         if tests.is_empty() {
             message::no_tests_enabled();
+        } else if project.keep_going && !project.has_pass {
+            report = match self.run_all(&project, tests) {
+                Ok(failures) => failures,
+                Err(err) => {
+                    message::test_fail(err);
+                    Report {
+                        failures: len,
+                        created_wip: 0,
+                    }
+                }
+            }
         } else {
             for test in tests {
-                if let Err(err) = test.run(&project) {
-                    failures += 1;
-                    message::test_fail(err);
+                match test.run(&project) {
+                    Ok(Outcome::Passed) => {}
+                    Ok(Outcome::CreatedWip) => report.created_wip += 1,
+                    Err(err) => {
+                        report.failures += 1;
+                        message::test_fail(err);
+                    }
                 }
             }
         }
 
         print!("\n\n");
 
-        if failures > 0 && project.name != "trybuild2-tests" {
-            panic!("{} of {} tests failed", failures, len);
+        if report.failures > 0 && project.name != "trybuild2-tests" {
+            panic!("{} of {} tests failed", report.failures, len);
+        }
+        if report.created_wip > 0 && project.name != "trybuild2-tests" {
+            panic!(
+                "successfully created new stderr files for {} test cases",
+                report.created_wip,
+            );
         }
     }
 
@@ -82,8 +115,6 @@ impl Runner {
             workspace_root: workspace,
             packages,
         } = cargo::metadata()?;
-
-        let crate_name = env::var("CARGO_PKG_NAME").map_err(Error::PkgName)?;
 
         let mut has_pass = false;
         let mut has_compile_fail = false;
@@ -96,10 +127,8 @@ impl Runner {
             }
         }
 
-        let source_dir = env::var_os("CARGO_MANIFEST_DIR")
-            .map(Directory::from)
-            .ok_or(Error::ProjectDir)?;
-        let source_manifest = dependencies::get_manifest(&source_dir);
+        let source_dir = cargo::manifest_dir()?;
+        let source_manifest = dependencies::get_manifest(&source_dir)?;
 
         let mut features = features::find();
 
@@ -120,19 +149,20 @@ impl Runner {
             })
             .collect();
 
-        let project_dir = path!(target_dir / "tests" / crate_name /);
+        let crate_name = &source_manifest.package.name;
+        let project_dir = path!(target_dir / "tests" / "trybuild" / crate_name /);
         fs::create_dir_all(&project_dir)?;
 
         let project_name = format!("{}-tests", crate_name);
         let manifest = self.make_manifest(
-            crate_name,
             &workspace,
             &project_name,
             &project_dir,
             &source_dir,
+            &packages,
             tests,
             source_manifest,
-        );
+        )?;
 
         if let Some(enabled_features) = &mut features {
             enabled_features.retain(|feature| manifest.features.contains_key(feature));
@@ -150,19 +180,25 @@ impl Runner {
             workspace,
             path_dependencies,
             manifest,
+            keep_going: false,
         })
     }
 
-    fn write(&self, project: &Project) -> Result<()> {
-        let manifest_toml = toml::to_string(&project.manifest)?;
+    fn write(&self, project: &mut Project) -> Result<()> {
+        let manifest_toml = basic_toml::to_string(&project.manifest)?;
 
         let config = self.make_config();
-        let config_toml = toml::to_string(&config)?;
+        let config_toml = basic_toml::to_string(&config)?;
 
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
-        fs::write(path!(project.dir / ".cargo" / "config"), config_toml)?;
+        fs::write(path!(project.dir / ".cargo" / "config.toml"), config_toml)?;
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
-        fs::write(path!(project.dir / "main.rs"), b"fn main() {}\n")?;
+
+        let main_rs = b"\
+            #![allow(unknown_lints, unused_crate_dependencies, missing_docs)]\n\
+            fn main() {}\n\
+        ";
+        fs::write(path!(project.dir / "main.rs"), &main_rs[..])?;
 
         cargo::build_dependencies(project)?;
 
@@ -172,66 +208,109 @@ impl Runner {
     #[allow(clippy::too_many_arguments)]
     fn make_manifest(
         &self,
-        crate_name: String,
         workspace: &Directory,
         project_name: &str,
         project_dir: &Directory,
         source_dir: &Directory,
+        packages: &[PackageMetadata],
         tests: &[ExpandedTest],
         source_manifest: dependencies::Manifest,
-    ) -> Manifest {
+    ) -> Result<Manifest> {
+        let crate_name = source_manifest.package.name;
         let workspace_manifest = dependencies::get_workspace_manifest(workspace);
 
-        let features = source_manifest
-            .features
-            .keys()
-            .map(|feature| {
-                let enable = format!("{}/{}", crate_name, feature);
-                (feature.clone(), vec![enable])
-            })
-            .collect();
+        let edition = match source_manifest.package.edition {
+            EditionOrInherit::Edition(edition) => edition,
+            EditionOrInherit::Inherit => workspace_manifest
+                .workspace
+                .package
+                .edition
+                .ok_or(Error::NoWorkspaceManifest)?,
+        };
+
+        let mut dependencies = Map::new();
+        dependencies.extend(source_manifest.dependencies);
+        dependencies.extend(source_manifest.dev_dependencies);
+
+        let cargo_toml_path = source_dir.join("Cargo.toml");
+        let mut has_lib_target = true;
+        for package_metadata in packages {
+            if package_metadata.manifest_path == cargo_toml_path {
+                has_lib_target = package_metadata
+                    .targets
+                    .iter()
+                    .any(|target| target.crate_types != ["bin"]);
+            }
+        }
+        if has_lib_target {
+            dependencies.insert(
+                crate_name.clone(),
+                Dependency {
+                    version: None,
+                    path: Some(source_dir.clone()),
+                    optional: false,
+                    default_features: false,
+                    features: Vec::new(),
+                    git: None,
+                    branch: None,
+                    tag: None,
+                    rev: None,
+                    workspace: false,
+                    rest: Map::new(),
+                },
+            );
+        }
+
+        let mut targets = source_manifest.target;
+        for target in targets.values_mut() {
+            let dev_dependencies = mem::take(&mut target.dev_dependencies);
+            target.dependencies.extend(dev_dependencies);
+        }
+
+        let mut features = source_manifest.features;
+        for (feature, enables) in &mut features {
+            enables.retain(|en| {
+                let dep_name = match en.strip_prefix("dep:") {
+                    Some(dep_name) => dep_name,
+                    None => return false,
+                };
+                if let Some(Dependency { optional: true, .. }) = dependencies.get(dep_name) {
+                    return true;
+                }
+                for target in targets.values() {
+                    if let Some(Dependency { optional: true, .. }) =
+                        target.dependencies.get(dep_name)
+                    {
+                        return true;
+                    }
+                }
+                false
+            });
+            if has_lib_target {
+                enables.insert(0, format!("{}/{}", crate_name, feature));
+            }
+        }
 
         let mut manifest = Manifest {
             package: Package {
                 name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
-                edition: source_manifest.package.edition,
+                edition,
                 resolver: source_manifest.package.resolver,
                 publish: false,
             },
             features,
-            dependencies: Map::new(),
-            target: source_manifest.target,
+            dependencies,
+            target: targets,
             bins: Vec::new(),
-            workspace: Some(Workspace {}),
+            workspace: Some(Workspace {
+                dependencies: workspace_manifest.workspace.dependencies,
+            }),
             // Within a workspace, only the [patch] and [replace] sections in
             // the workspace root's Cargo.toml are applied by Cargo.
             patch: workspace_manifest.patch,
             replace: workspace_manifest.replace,
         };
-
-        manifest.dependencies.extend(source_manifest.dependencies);
-        manifest
-            .dependencies
-            .extend(source_manifest.dev_dependencies);
-        for target in manifest.target.values_mut() {
-            let dev_dependencies = mem::replace(&mut target.dev_dependencies, Map::new());
-            target.dependencies.extend(dev_dependencies);
-        }
-        manifest.dependencies.insert(
-            crate_name,
-            Dependency {
-                version: None,
-                path: Some(source_dir.clone()),
-                default_features: false,
-                features: Vec::new(),
-                git: None,
-                branch: None,
-                tag: None,
-                rev: None,
-                rest: Map::new(),
-            },
-        );
 
         manifest.bins.push(Bin {
             name: Name(project_name.to_owned()),
@@ -241,7 +320,7 @@ impl Runner {
         for expanded in tests {
             if expanded.error.is_none() {
                 let path = match expanded.test.inner {
-                    TestKind::File(ref t) => source_dir.join(&t.path),
+                    TestKind::File => source_dir.join(&expanded.test.path),
                     TestKind::Inline(ref t) => project_dir.join(&format!("{}.rs", t.name)),
                 };
                 manifest.bins.push(Bin {
@@ -251,7 +330,7 @@ impl Runner {
             }
         }
 
-        manifest
+        Ok(manifest)
     }
 
     fn make_config(&self) -> Config {
@@ -261,40 +340,140 @@ impl Runner {
             },
         }
     }
+
+    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<Report> {
+        let mut report = Report {
+            failures: 0,
+            created_wip: 0,
+        };
+
+        let mut path_map = Map::new();
+        for t in &tests {
+            let src_path;
+            match t.test.inner {
+                TestKind::File => {
+                    src_path = project.source_dir.join(&t.test.path);
+                }
+                TestKind::Inline(ref inl) => {
+                    src_path = project.dir.join(&format!("{}.rs", inl.name));
+                }
+            }
+            path_map.insert(src_path, (&t.name, &t.test));
+        }
+
+        let output = cargo::build_all_tests(project)?;
+        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
+        let fallback = Stderr::default();
+
+        for mut t in tests {
+            let show_expected = false;
+            message::begin_test(&t.test, show_expected);
+
+            let mut src_path = None;
+            let mut stderr_path = None;
+            if t.error.is_none() {
+                match t.test.inner {
+                    TestKind::File => {
+                        t.error = check_exists(&t.test.path).err();
+                        src_path = Some(project.source_dir.join(&t.test.path));
+                    }
+                    TestKind::Inline(ref inl) => {
+                        t.error = create_inline_test(inl, project).err();
+                        src_path = Some(project.dir.join(&format!("{}.rs", inl.name)));
+                        stderr_path = inl.stderr_path.clone();
+                    }
+                }
+            }
+
+            if t.error.is_none() {
+                if let Some(src_path) = src_path {
+                    let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
+                    match t.test.check(project, &t.name, this_test, "", stderr_path) {
+                        Ok(Outcome::Passed) => {}
+                        Ok(Outcome::CreatedWip) => report.created_wip += 1,
+                        Err(error) => t.error = Some(error),
+                    }
+                }
+            }
+
+            if let Some(err) = t.error {
+                report.failures += 1;
+                message::test_fail(err);
+            }
+        }
+
+        Ok(report)
+    }
+}
+
+enum Outcome {
+    Passed,
+    CreatedWip,
 }
 
 impl Test {
-    fn run(&self, project: &Project, name: &Name) -> Result<()> {
+    fn run(&self, project: &Project, name: &Name) -> Result<Outcome> {
         let show_expected = project.has_pass && project.has_compile_fail;
         message::begin_test(self, show_expected);
+
+        let src_path;
+        let stderr_path;
         match self.inner {
-            TestKind::File(FileTest { ref path }) => check_exists(path)?,
-            TestKind::Inline(ref t) => create_inline_test(t, project)?,
-        };
+            TestKind::File => {
+                check_exists(&self.path)?;
+                src_path = project.source_dir.join(&self.path);
+                stderr_path = None;
+            }
+            TestKind::Inline(ref t) => {
+                create_inline_test(t, project)?;
+                src_path = project.dir.join(&format!("{}.rs", t.name));
+                stderr_path = t.stderr_path.clone();
+            }
+        }
 
+        let mut path_map = Map::new();
+        path_map.insert(src_path.clone(), (name, self));
         let output = cargo::build_test(project, name)?;
-        let success = output.status.success();
-        let stdout = output.stdout;
-        let stderr = normalize::diagnostics(
-            output.stderr,
-            Context {
-                krate: &name.0,
-                source_dir: &project.source_dir,
-                workspace: &project.workspace,
-                input_file: self.path(),
-                target_dir: &project.target_dir,
-                path_dependencies: &project.path_dependencies,
-            },
-        );
+        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
+        let fallback = Stderr::default();
+        let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
+        self.check(project, name, this_test, &parsed.stdout, stderr_path)
+    }
 
+    fn check(
+        &self,
+        project: &Project,
+        name: &Name,
+        result: &Stderr,
+        build_stdout: &str,
+        stderr_path: Option<PathBuf>,
+    ) -> Result<Outcome> {
         match self.expected {
-            Expected::Pass => Test::check_pass(self, project, name, success, stdout, stderr),
-            Expected::CompileFail => {
-                Test::check_compile_fail(self, project, name, success, stdout, stderr)
-            }
-            Expected::CompileFailSubString(ref s) => {
-                Test::check_compile_fail_sub_str(self, name, success, stdout, stderr, s)
-            }
+            Expected::Pass => Test::check_pass(
+                self,
+                project,
+                name,
+                result.success,
+                build_stdout,
+                &result.stderr,
+            ),
+            Expected::CompileFail => Test::check_compile_fail(
+                self,
+                project,
+                name,
+                result.success,
+                build_stdout,
+                &result.stderr,
+                stderr_path,
+            ),
+            Expected::CompileFailSubString(ref s) => Test::check_compile_fail_sub_str(
+                self,
+                name,
+                result.success,
+                build_stdout,
+                &result.stderr,
+                s,
+            ),
         }
     }
 
@@ -303,9 +482,9 @@ impl Test {
         project: &Project,
         name: &Name,
         success: bool,
-        build_stdout: Vec<u8>,
-        variations: Variations,
-    ) -> Result<()> {
+        build_stdout: &str,
+        variations: &Variations,
+    ) -> Result<Outcome> {
         let preferred = variations.preferred();
         if !success {
             message::failed_to_build(preferred);
@@ -313,10 +492,10 @@ impl Test {
         }
 
         let mut output = cargo::run_test(project, name)?;
-        output.stdout.splice(..0, build_stdout);
+        output.stdout.splice(..0, build_stdout.bytes());
         message::output(preferred, &output);
         if output.status.success() {
-            Ok(())
+            Ok(Outcome::Passed)
         } else {
             Err(Error::RunFailed)
         }
@@ -327,15 +506,23 @@ impl Test {
         project: &Project,
         _name: &Name,
         success: bool,
-        build_stdout: Vec<u8>,
-        variations: Variations,
-    ) -> Result<()> {
-        let preferred = check_success(success, &build_stdout, &variations)?;
+        build_stdout: &str,
+        variations: &Variations,
+        stderr_path: Option<PathBuf>,
+    ) -> Result<Outcome> {
+        let preferred = variations.preferred();
 
-        let stderr_path = self.stderr_path();
+        if success {
+            message::should_not_have_compiled();
+            message::fail_output(Fail, build_stdout);
+            message::warnings(preferred);
+            return Err(Error::ShouldNotHaveCompiled);
+        }
+
+        let stderr_path = stderr_path.unwrap_or_else(|| self.path.with_extension("stderr"));
 
         if !stderr_path.exists() {
-            match project.update {
+            let outcome = match project.update {
                 Update::Wip => {
                     let wip_dir = Path::new("wip");
                     fs::create_dir_all(wip_dir)?;
@@ -345,16 +532,18 @@ impl Test {
                         .file_name()
                         .unwrap_or_else(|| OsStr::new("test.stderr"));
                     let wip_path = wip_dir.join(stderr_name);
-                    message::write_stderr_wip(&wip_path, &stderr_path, &preferred);
-                    fs::write(wip_path, &preferred).map_err(Error::WriteStderr)?;
+                    message::write_stderr_wip(&wip_path, &stderr_path, preferred);
+                    fs::write(wip_path, preferred).map_err(Error::WriteStderr)?;
+                    Outcome::CreatedWip
                 }
                 Update::Overwrite => {
-                    message::overwrite_stderr(&stderr_path, &preferred);
-                    fs::write(stderr_path, &preferred).map_err(Error::WriteStderr)?;
+                    message::overwrite_stderr(&stderr_path, preferred);
+                    fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
+                    Outcome::Passed
                 }
-            }
-            message::fail_output(Warn, &build_stdout);
-            return Ok(());
+            };
+            message::fail_output(Warn, build_stdout);
+            return Ok(outcome);
         }
 
         let expected = fs::read_to_string(&stderr_path)
@@ -363,7 +552,7 @@ impl Test {
 
         if variations.any(|stderr| expected == stderr) {
             message::ok();
-            return Ok(());
+            return Ok(Outcome::Passed);
         }
 
         match project.update {
@@ -372,9 +561,9 @@ impl Test {
                 Err(Error::Mismatch)
             }
             Update::Overwrite => {
-                message::overwrite_stderr(&stderr_path, &preferred);
-                fs::write(stderr_path, &preferred).map_err(Error::WriteStderr)?;
-                Ok(())
+                message::overwrite_stderr(&stderr_path, preferred);
+                fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
+                Ok(Outcome::Passed)
             }
         }
     }
@@ -383,34 +572,26 @@ impl Test {
         &self,
         _name: &Name,
         success: bool,
-        build_stdout: Vec<u8>,
-        variations: Variations,
+        build_stdout: &str,
+        variations: &Variations,
         expected: &str,
-    ) -> Result<()> {
-        let preferred = check_success(success, &build_stdout, &variations)?;
+    ) -> Result<Outcome> {
+        let preferred = variations.preferred();
 
-        let expected = expected.replace("\r\n", "\n");
-
-        if variations.any(|stderr| stderr.contains(&expected)) {
-            message::ok();
-            Ok(())
-        } else {
-            message::mismatch(&format!("{}\n", expected), &preferred, " SUBSTRING TO FIND");
-            Err(Error::Mismatch)
+        if success {
+            message::should_not_have_compiled();
+            message::fail_output(Fail, build_stdout);
+            message::warnings(preferred);
+            return Err(Error::ShouldNotHaveCompiled);
         }
-    }
-}
 
-fn check_success(success: bool, build_stdout: &[u8], variations: &Variations) -> Result<String> {
-    let preferred = variations.preferred();
+        if variations.any(|stderr| stderr.contains(expected)) {
+            message::ok();
+            return Ok(Outcome::Passed);
+        }
 
-    if success {
-        message::should_not_have_compiled();
-        message::fail_output(Fail, build_stdout);
-        message::warnings(preferred);
-        Err(Error::ShouldNotHaveCompiled)
-    } else {
-        Ok(preferred.to_owned())
+        message::mismatch(&expected, &preferred, "");
+        Err(Error::Mismatch)
     }
 }
 
@@ -432,74 +613,12 @@ fn create_inline_test(test: &InlineTest, project: &Project) -> Result<()> {
         .create(true)
         .open(&path)
         .map_err(Error::FileCreation)?;
+    // panic!("===> Creating file {:?} with content: ```\n{}\n```", path, test.code);
     write!(file, "{}", test.code).map_err(Error::FileCreation)
 }
 
-#[derive(Debug)]
-struct ExpandedTest {
-    name: Name,
-    test: Test,
-    error: Option<Error>,
-}
-
-fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
-    fn glob(pattern: &str) -> Result<Vec<PathBuf>> {
-        let mut paths = glob::glob(pattern)?
-            .map(|entry| entry.map_err(Error::from))
-            .collect::<Result<Vec<PathBuf>>>()?;
-        paths.sort();
-        Ok(paths)
-    }
-
-    fn bin_name(i: usize) -> Name {
-        Name(format!("trybuild2{:03}", i))
-    }
-
-    let mut vec = Vec::new();
-
-    for test in tests {
-        let expanded = if test.is_inline() {
-            ExpandedTest {
-                name: bin_name(vec.len()),
-                test: test.clone(),
-                error: None,
-            }
-        } else {
-            let mut expanded = ExpandedTest {
-                name: bin_name(vec.len()),
-                test: test.clone(),
-                error: None,
-            };
-            if let Some(utf8) = test.path().to_str() {
-                if utf8.contains('*') {
-                    match glob(utf8) {
-                        Ok(paths) => {
-                            for path in paths {
-                                vec.push(ExpandedTest {
-                                    name: bin_name(vec.len()),
-                                    test: Test {
-                                        expected: expanded.test.expected.clone(),
-                                        inner: TestKind::File(FileTest { path }),
-                                    },
-                                    error: None,
-                                });
-                            }
-                            continue;
-                        }
-                        Err(error) => expanded.error = Some(error),
-                    }
-                }
-            }
-            expanded
-        };
-        vec.push(expanded);
-    }
-
-    vec
-}
-
 impl ExpandedTest {
-    fn run(self, project: &Project) -> Result<()> {
+    fn run(self, project: &Project) -> Result<Outcome> {
         match self.error {
             None => self.test.run(project, &self.name),
             Some(error) => {
@@ -541,6 +660,113 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
     tests.retain(|t| {
         filters
             .iter()
-            .any(|f| t.test.path().to_string_lossy().contains(f))
+            .any(|f| t.test.path.to_string_lossy().contains(f))
     });
+}
+
+#[derive(Deserialize)]
+struct CargoMessage {
+    #[allow(dead_code)]
+    reason: Reason,
+    target: RustcTarget,
+    message: RustcMessage,
+}
+
+#[derive(Deserialize)]
+enum Reason {
+    #[serde(rename = "compiler-message")]
+    CompilerMessage,
+}
+
+#[derive(Deserialize)]
+struct RustcTarget {
+    src_path: PathBuf,
+}
+
+#[derive(Deserialize)]
+struct RustcMessage {
+    rendered: String,
+    level: String,
+}
+
+struct ParsedOutputs {
+    stdout: String,
+    stderrs: Map<PathBuf, Stderr>,
+}
+
+struct Stderr {
+    success: bool,
+    stderr: Variations,
+}
+
+impl Default for Stderr {
+    fn default() -> Self {
+        Stderr {
+            success: true,
+            stderr: Variations::default(),
+        }
+    }
+}
+
+fn parse_cargo_json(
+    project: &Project,
+    stdout: &[u8],
+    path_map: &Map<PathBuf, (&Name, &Test)>,
+) -> ParsedOutputs {
+    let mut map = Map::new();
+    let mut nonmessage_stdout = String::new();
+    let mut remaining = &*String::from_utf8_lossy(stdout);
+    let mut seen = Set::new();
+    while !remaining.is_empty() {
+        let begin = match remaining.find("{\"reason\":") {
+            Some(begin) => begin,
+            None => break,
+        };
+        let (nonmessage, rest) = remaining.split_at(begin);
+        nonmessage_stdout.push_str(nonmessage);
+        let len = match rest.find('\n') {
+            Some(end) => end + 1,
+            None => rest.len(),
+        };
+        let (message, rest) = rest.split_at(len);
+        remaining = rest;
+        if !seen.insert(message) {
+            // Discard duplicate messages. This might no longer be necessary
+            // after https://github.com/rust-lang/rust/issues/106571 is fixed.
+            // Normally rustc would filter duplicates itself and I think this is
+            // a short-lived bug.
+            continue;
+        }
+        if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
+            if de.message.level != "failure-note" {
+                let (name, test) = match path_map.get(&de.target.src_path) {
+                    Some(test) => test,
+                    None => continue,
+                };
+                let mut entry = map
+                    .entry(de.target.src_path)
+                    .or_insert_with(Stderr::default);
+                if de.message.level == "error" {
+                    entry.success = false;
+                }
+                let normalized = normalize::diagnostics(
+                    &de.message.rendered,
+                    Context {
+                        krate: &name.0,
+                        source_dir: &project.source_dir,
+                        workspace: &project.workspace,
+                        input_file: &test.path,
+                        target_dir: &project.target_dir,
+                        path_dependencies: &project.path_dependencies,
+                    },
+                );
+                entry.stderr.concat(&normalized);
+            }
+        }
+    }
+    nonmessage_stdout.push_str(remaining);
+    ParsedOutputs {
+        stdout: nonmessage_stdout,
+        stderrs: map,
+    }
 }

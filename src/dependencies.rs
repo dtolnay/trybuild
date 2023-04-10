@@ -1,23 +1,26 @@
 use crate::directory::Directory;
 use crate::error::Error;
+use crate::inherit::InheritEdition;
 use crate::manifest::Edition;
 use serde::de::value::MapAccessDeserializer;
-use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::value::StrDeserializer;
+use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::ser::{Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap as Map;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
-use toml::Value;
 
-pub fn get_manifest(manifest_dir: &Directory) -> Manifest {
-    try_get_manifest(manifest_dir).unwrap_or_default()
-}
-
-fn try_get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
+pub fn get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
-    let manifest_str = fs::read_to_string(cargo_toml_path)?;
-    let mut manifest: Manifest = toml::from_str(&manifest_str)?;
+    let mut manifest = (|| {
+        let manifest_str = fs::read_to_string(&cargo_toml_path)?;
+        let manifest: Manifest = basic_toml::from_str(&manifest_str)?;
+        Ok(manifest)
+    })()
+    .map_err(|err| Error::GetManifest(cargo_toml_path, Box::new(err)))?;
 
     fix_dependencies(&mut manifest.dependencies, manifest_dir);
     fix_dependencies(&mut manifest.dev_dependencies, manifest_dir);
@@ -36,8 +39,9 @@ pub fn get_workspace_manifest(manifest_dir: &Directory) -> WorkspaceManifest {
 pub fn try_get_workspace_manifest(manifest_dir: &Directory) -> Result<WorkspaceManifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
-    let mut manifest: WorkspaceManifest = toml::from_str(&manifest_str)?;
+    let mut manifest: WorkspaceManifest = basic_toml::from_str(&manifest_str)?;
 
+    fix_dependencies(&mut manifest.workspace.dependencies, manifest_dir);
     fix_patches(&mut manifest.patch, manifest_dir);
     fix_replacements(&mut manifest.replace, manifest_dir);
 
@@ -70,9 +74,24 @@ fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Directory) {
 #[derive(Deserialize, Default, Debug)]
 pub struct WorkspaceManifest {
     #[serde(default)]
+    pub workspace: WorkspaceWorkspace,
+    #[serde(default)]
     pub patch: Map<String, RegistryPatch>,
     #[serde(default)]
     pub replace: Map<String, Patch>,
+}
+
+#[derive(Deserialize, Default, Debug)]
+pub struct WorkspaceWorkspace {
+    #[serde(default)]
+    pub package: WorkspacePackage,
+    #[serde(default)]
+    pub dependencies: Map<String, Dependency>,
+}
+
+#[derive(Deserialize, Default, Debug)]
+pub struct WorkspacePackage {
+    pub edition: Option<Edition>,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -91,9 +110,16 @@ pub struct Manifest {
 
 #[derive(Deserialize, Default, Debug)]
 pub struct Package {
+    pub name: String,
     #[serde(default)]
-    pub edition: Edition,
+    pub edition: EditionOrInherit,
     pub resolver: Option<String>,
+}
+
+#[derive(Debug)]
+pub enum EditionOrInherit {
+    Edition(Edition),
+    Inherit,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -103,6 +129,8 @@ pub struct Dependency {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<Directory>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub optional: bool,
     #[serde(
         rename = "default-features",
         default = "get_true",
@@ -119,6 +147,8 @@ pub struct Dependency {
     pub tag: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rev: Option<String>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub workspace: bool,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
 }
@@ -138,7 +168,7 @@ pub struct TargetDependencies {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
 pub struct RegistryPatch {
-    crates: Map<String, Patch>,
+    pub crates: Map<String, Patch>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -163,6 +193,50 @@ fn get_true() -> bool {
 
 fn is_true(boolean: &bool) -> bool {
     *boolean
+}
+
+fn is_false(boolean: &bool) -> bool {
+    !*boolean
+}
+
+impl Default for EditionOrInherit {
+    fn default() -> Self {
+        EditionOrInherit::Edition(Edition::default())
+    }
+}
+
+impl<'de> Deserialize<'de> for EditionOrInherit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EditionOrInheritVisitor;
+
+        impl<'de> Visitor<'de> for EditionOrInheritVisitor {
+            type Value = EditionOrInherit;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("edition")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Edition::deserialize(StrDeserializer::new(s)).map(EditionOrInherit::Edition)
+            }
+
+            fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+            where
+                M: de::MapAccess<'de>,
+            {
+                InheritEdition::deserialize(MapAccessDeserializer::new(map))?;
+                Ok(EditionOrInherit::Inherit)
+            }
+        }
+
+        deserializer.deserialize_any(EditionOrInheritVisitor)
+    }
 }
 
 impl Serialize for Dependency {
@@ -198,12 +272,14 @@ impl<'de> Deserialize<'de> for Dependency {
                 Ok(Dependency {
                     version: Some(s.to_owned()),
                     path: None,
+                    optional: false,
                     default_features: true,
                     features: Vec::new(),
                     git: None,
                     branch: None,
                     tag: None,
                     rev: None,
+                    workspace: false,
                     rest: Map::new(),
                 })
             }

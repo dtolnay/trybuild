@@ -1,5 +1,5 @@
 #[test]
-fn test() {
+fn test_api() {
     let t = trybuild2::TestCases::new();
     t.pass("tests/ui/run-pass-0.rs");
     t.pass("tests/ui/print-stdout.rs");

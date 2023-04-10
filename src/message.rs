@@ -51,7 +51,7 @@ pub(crate) fn ok() {
 }
 
 pub(crate) fn begin_test(test: &Test, show_expected: bool) {
-    let display_name = test.path().as_os_str().to_string_lossy();
+    let display_name = test.path.as_os_str().to_string_lossy();
 
     print!("test ");
     term::bold();
@@ -182,7 +182,7 @@ pub(crate) fn output(warnings: &str, output: &Output) {
     }
 }
 
-pub(crate) fn fail_output(level: Level, stdout: &[u8]) {
+pub(crate) fn fail_output(level: Level, stdout: &str) {
     let color = match level {
         Fail => Red,
         Warn => Yellow,

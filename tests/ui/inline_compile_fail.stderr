@@ -2,4 +2,4 @@ error: ERROR
  --> inline_compile_fail.rs:1:13
   |
 1 | fn main() { compile_error!("ERROR"); }
-  |             ^^^^^^^^^^^^^^^^^^^^^^^^
+  |             ^^^^^^^^^^^^^^^^^^^^^^^

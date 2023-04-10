@@ -43,6 +43,6 @@ fn test_path_macro() {
         dir: PathBuf::from("../target/tests"),
     };
 
-    let cargo_dir = path!(project.dir / ".cargo" / "config");
-    assert_eq!(cargo_dir, Path::new("../target/tests/.cargo/config"));
+    let cargo_dir = path!(project.dir / ".cargo" / "config.toml");
+    assert_eq!(cargo_dir, Path::new("../target/tests/.cargo/config.toml"));
 }
