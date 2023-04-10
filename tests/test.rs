@@ -26,6 +26,7 @@ fn test_api() {
         "tests/ui/inline_compile_fail.stderr",
     );
     t.compile_fail_check_sub("tests/ui/compile-fail-0.rs", "compile_error!");
+    // This one should be a mismatch!
     t.compile_fail_check_sub("tests/ui/compile-fail-0.rs", "I'm not here!");
     t.compile_fail_inline_check_sub(
         "inline_compile_fail_sub",
