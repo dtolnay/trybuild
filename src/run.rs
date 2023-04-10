@@ -608,7 +608,6 @@ fn create_inline_test(test: &InlineTest, project: &Project) -> Result<()> {
         .create(true)
         .open(path)
         .map_err(Error::FileCreation)?;
-    // panic!("===> Creating file {:?} with content: ```\n{}\n```", path, test.code);
     write!(file, "{}", test.code).map_err(Error::FileCreation)
 }
 
