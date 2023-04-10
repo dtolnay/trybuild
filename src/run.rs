@@ -349,15 +349,10 @@ impl Runner {
 
         let mut path_map = Map::new();
         for t in &tests {
-            let src_path;
-            match t.test.inner {
-                TestKind::File => {
-                    src_path = project.source_dir.join(&t.test.path);
-                }
-                TestKind::Inline(ref inl) => {
-                    src_path = project.dir.join(&format!("{}.rs", inl.name));
-                }
-            }
+            let src_path = match t.test.inner {
+                TestKind::File => project.source_dir.join(&t.test.path),
+                TestKind::Inline(ref inl) => project.dir.join(&format!("{}.rs", inl.name)),
+            };
             path_map.insert(src_path, (&t.name, &t.test));
         }
 
@@ -426,7 +421,7 @@ impl Test {
             }
             TestKind::Inline(ref t) => {
                 create_inline_test(t, project)?;
-                src_path = project.dir.join(&format!("{}.rs", t.name));
+                src_path = project.dir.join(format!("{}.rs", t.name));
                 stderr_path = t.stderr_path.clone();
             }
         }
@@ -557,7 +552,7 @@ impl Test {
 
         match project.update {
             Update::Wip => {
-                message::mismatch(&expected, &preferred, "");
+                message::mismatch(&expected, preferred, "");
                 Err(Error::Mismatch)
             }
             Update::Overwrite => {
@@ -590,7 +585,7 @@ impl Test {
             return Ok(Outcome::Passed);
         }
 
-        message::mismatch(&expected, &preferred, "");
+        message::mismatch(expected, preferred, "");
         Err(Error::Mismatch)
     }
 }
@@ -611,7 +606,7 @@ fn create_inline_test(test: &InlineTest, project: &Project) -> Result<()> {
         .write(true)
         .truncate(true)
         .create(true)
-        .open(&path)
+        .open(path)
         .map_err(Error::FileCreation)?;
     // panic!("===> Creating file {:?} with content: ```\n{}\n```", path, test.code);
     write!(file, "{}", test.code).map_err(Error::FileCreation)
