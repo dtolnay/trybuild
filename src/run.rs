@@ -341,17 +341,27 @@ impl Runner {
         }
     }
 
-    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<Report> {
+    fn run_all(&self, project: &Project, mut tests: Vec<ExpandedTest>) -> Result<Report> {
         let mut report = Report {
             failures: 0,
             created_wip: 0,
         };
 
         let mut path_map = Map::new();
-        for t in &tests {
+        for t in &mut tests {
             let src_path = match t.test.inner {
-                TestKind::File => project.source_dir.join(&t.test.path),
-                TestKind::Inline(ref inl) => project.dir.join(&format!("{}.rs", inl.name)),
+                TestKind::File => {
+                    if t.error.is_none() {
+                        t.error = check_exists(&t.test.path).err();
+                    }
+                    project.source_dir.join(&t.test.path)
+                }
+                TestKind::Inline(ref inl) => {
+                    if t.error.is_none() {
+                        t.error = create_inline_test(inl, project).err();
+                    }
+                    project.dir.join(&format!("{}.rs", inl.name))
+                }
             };
             path_map.insert(src_path, (&t.name, &t.test));
         }
@@ -369,11 +379,9 @@ impl Runner {
             if t.error.is_none() {
                 match t.test.inner {
                     TestKind::File => {
-                        t.error = check_exists(&t.test.path).err();
                         src_path = Some(project.source_dir.join(&t.test.path));
                     }
                     TestKind::Inline(ref inl) => {
-                        t.error = create_inline_test(inl, project).err();
                         src_path = Some(project.dir.join(&format!("{}.rs", inl.name)));
                         stderr_path = inl.stderr_path.clone();
                     }
