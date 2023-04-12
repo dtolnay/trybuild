@@ -331,16 +331,19 @@ impl Runner {
         }
     }
 
-    fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<Report> {
+    fn run_all(&self, project: &Project, mut tests: Vec<ExpandedTest>) -> Result<Report> {
         let mut report = Report {
             failures: 0,
             created_wip: 0,
         };
 
         let mut path_map = Map::new();
-        for t in &tests {
+        for t in &mut tests {
             let src_path = project.source_dir.join(&t.test.path);
             path_map.insert(src_path, (&t.name, &t.test));
+            if t.error.is_none() {
+                t.error = check_exists(&t.test.path).err();
+            }
         }
 
         let output = cargo::build_all_tests(project)?;
@@ -350,10 +353,6 @@ impl Runner {
         for mut t in tests {
             let show_expected = false;
             message::begin_test(&t.test, show_expected);
-
-            if t.error.is_none() {
-                t.error = check_exists(&t.test.path).err();
-            }
 
             if t.error.is_none() {
                 let src_path = project.source_dir.join(&t.test.path);
