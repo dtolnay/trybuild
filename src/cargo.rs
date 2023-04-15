@@ -4,6 +4,7 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde_derive::Deserialize;
+use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::{env, fs, iter};
@@ -146,8 +147,14 @@ pub fn build_all_tests(project: &Project) -> Result<Output> {
 }
 
 pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
+
+    let cargo_command = match env::var_os("TRYBUILD_CARGO_CMD") {
+        Some(cmd) => cmd,
+        None => OsString::from("run"),
+    };
+
     cargo(project)
-        .arg("run")
+        .arg(cargo_command)
         .args(target())
         .arg("--bin")
         .arg(name)
