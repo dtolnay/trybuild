@@ -646,7 +646,7 @@ fn parse_cargo_json(
                     Some(test) => test,
                     None => continue,
                 };
-                let mut entry = map
+                let entry = map
                     .entry(de.target.src_path)
                     .or_insert_with(Stderr::default);
                 if de.message.level == "error" {
