@@ -66,8 +66,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
-      - run: cargo update -Z minimal-versions
-      - run: cargo check
+      - run: cargo generate-lockfile -Z minimal-versions
+      - run: cargo check --locked
 
   clippy:
     name: Clippy
