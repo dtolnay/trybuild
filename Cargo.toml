@@ -5,12 +5,12 @@ authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["development-tools::testing"]
 description = "Test harness for ui tests of compiler diagnostics"
 documentation = "https://docs.rs/trybuild"
-edition = "2018"
+edition = "2021"
 exclude = ["screenshots/*"]
 keywords = ["macros", "testing", "dev-dependencies"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/trybuild"
-rust-version = "1.45"
+rust-version = "1.56"
 
 [features]
 # Experimental: highlight the diff between the expected and actual compiler
