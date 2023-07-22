@@ -120,8 +120,8 @@ impl Runner {
         let mut has_compile_fail = false;
         for e in tests {
             match e.test.expected {
-                Expected::Pass => has_pass = true,
-                Expected::CompileFailSubString(_) | Expected::CompileFail => {
+                Expected::Pass | Expected::PassSubString(_) => has_pass = true,
+                Expected::CompileFail | Expected::CompileFailSubString(_) => {
                     has_compile_fail = true;
                 }
             }
@@ -460,6 +460,15 @@ impl Test {
                 build_stdout,
                 &result.stderr,
             ),
+            Expected::PassSubString(ref s) => Test::check_pass_sub_str(
+                self,
+                project,
+                name,
+                result.success,
+                build_stdout,
+                &result.stderr,
+                s,
+            ),
             Expected::CompileFail => Test::check_compile_fail(
                 self,
                 project,
@@ -502,6 +511,34 @@ impl Test {
         } else {
             Err(Error::RunFailed)
         }
+    }
+
+    fn check_pass_sub_str(
+        &self,
+        project: &Project,
+        name: &Name,
+        success: bool,
+        build_stdout: &str,
+        variations: &Variations,
+        expected: &str,
+    ) -> Result<Outcome> {
+        let preferred = variations.preferred();
+        if !success {
+            message::failed_to_build(preferred);
+            return Err(Error::CargoFail);
+        }
+
+        let mut output = cargo::run_test(project, name)?;
+        output.stdout.splice(..0, build_stdout.bytes());
+        if !output.status.success() {
+            return Err(Error::RunFailed);
+        }
+        if variations.any(|stderr| stderr.contains(expected)) {
+            message::ok();
+            return Ok(Outcome::Passed);
+        }
+        message::mismatch(expected, preferred, "");
+        Err(Error::Mismatch)
     }
 
     fn check_compile_fail(

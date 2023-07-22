@@ -220,7 +220,7 @@
 //! If you need  more control over the stderr check as well, you can take a
 //! look at `compile_fail_check_sub` and `compile_fail_inline_check_sub`.
 
-#![doc(html_root_url = "https://docs.rs/trybuild/1.0.82")]
+#![doc(html_root_url = "https://docs.rs/trybuild2/1.0.2")]
 #![allow(
     clippy::collapsible_if,
     clippy::default_trait_access,
@@ -306,6 +306,7 @@ struct InlineTest {
 #[derive(Clone, Debug)]
 enum Expected {
     Pass,
+    PassSubString(String),
     CompileFail,
     CompileFailSubString(String),
 }
@@ -329,6 +330,26 @@ impl TestCases {
     pub fn pass_inline(&self, name: &str, code: &str) {
         self.runner.borrow_mut().tests.push(Test {
             expected: Expected::Pass,
+            path: PathBuf::from(name),
+            inner: TestKind::Inline(InlineTest {
+                code: code.to_owned(),
+                name: name.to_owned(),
+                stderr_path: None,
+            }),
+        });
+    }
+
+    pub fn pass_check_sub<P: AsRef<Path>>(&self, path: P, sub_string: &str) {
+        self.runner.borrow_mut().tests.push(Test {
+            expected: Expected::PassSubString(sub_string.to_owned()),
+            path: path.as_ref().to_owned(),
+            inner: TestKind::File,
+        });
+    }
+
+    pub fn pass_inline_check_sub(&self, name: &str, code: &str, sub_string: &str) {
+        self.runner.borrow_mut().tests.push(Test {
+            expected: Expected::PassSubString(sub_string.to_owned()),
             path: PathBuf::from(name),
             inner: TestKind::Inline(InlineTest {
                 code: code.to_owned(),
