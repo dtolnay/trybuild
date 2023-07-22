@@ -20,6 +20,14 @@ fn test_api() {
     t.compile_fail("tests/ui/compile-fail-2.rs");
     t.compile_fail("tests/ui/compile-fail-3.rs");
     t.pass_inline("inline_pass_main", "fn main() {}");
+    // Should be a mismatch.
+    t.pass_inline_check_sub("inline_check_sub", "fn main() { let x = 12; }", "wuwu");
+    // Should be ok.
+    t.pass_inline_check_sub(
+        "inline_check_sub2",
+        "fn main() { let x = 12; }",
+        "warning: unused variable: `x`",
+    );
     t.compile_fail_inline(
         "inline_compile_fail",
         "fn main() { compile_error!(\"ERROR\"); }",
