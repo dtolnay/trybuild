@@ -58,7 +58,7 @@ impl ExpandedTestSet {
 
     fn insert(&mut self, test: Test, error: Option<Error>, is_from_glob: bool) {
         if let Some(&i) = self.path_to_index.get(&test.path) {
-            let mut prev = &mut self.vec[i];
+            let prev = &mut self.vec[i];
             if prev.is_from_glob {
                 prev.test.expected = test.expected;
                 return;

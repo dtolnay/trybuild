@@ -33,7 +33,7 @@ jobs:
           toolchain: ${{matrix.rust}}
       - name: Enable type layout randomization
         run: echo RUSTFLAGS=${RUSTFLAGS}\ -Zrandomize-layout >> $GITHUB_ENV
-        if: matrix.rust == 'nightly'
+        if: matrix.rust == 'nightly' && false # FIXME https://github.com/rust-lang/rust/issues/113941
       - run: cargo test
 
   xplat:
@@ -55,6 +55,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       - name: Enable type layout randomization
         run: echo RUSTFLAGS=${RUSTFLAGS}\ -Zrandomize-layout >> $GITHUB_ENV
+        if: false # FIXME https://github.com/rust-lang/rust/issues/113941
       - run: cargo test
 
   minimal:
@@ -66,8 +67,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@nightly
-      - run: cargo update -Z minimal-versions
-      - run: cargo check
+      - run: cargo generate-lockfile -Z minimal-versions
+      - run: cargo check --locked
 
   clippy:
     name: Clippy
