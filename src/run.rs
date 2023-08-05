@@ -191,7 +191,7 @@ impl Runner {
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
 
         let main_rs = b"\
-            #![allow(unknown_lints, unused_crate_dependencies, missing_docs)]\n\
+            #![allow(unused_crate_dependencies, missing_docs)]\n\
             fn main() {}\n\
         ";
         fs::write(path!(project.dir / "main.rs"), &main_rs[..])?;
