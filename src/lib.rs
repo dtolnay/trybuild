@@ -208,7 +208,7 @@
 //! makes error messages that we care about substantially worse, it is also
 //! important to catch and report as a compiler issue.
 
-#![doc(html_root_url = "https://docs.rs/trybuild/1.0.83")]
+#![doc(html_root_url = "https://docs.rs/trybuild/1.0.84")]
 #![allow(
     clippy::collapsible_if,
     clippy::default_trait_access,
