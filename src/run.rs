@@ -52,7 +52,7 @@ impl Runner {
 
         let (project, _lock) = (|| {
             let mut project = self.prepare(&tests)?;
-            let lock = Lock::acquire(path!(project.dir / ".lock"));
+            let lock = Lock::acquire(path!(project.dir / ".lock"))?;
             self.write(&mut project)?;
             Ok((project, lock))
         })()
