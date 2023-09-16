@@ -59,7 +59,8 @@ impl FileLock {
             Some(lockfile) => lockfile,
         };
         let done = Arc::new(AtomicBool::new(false));
-        thread::Builder::new().spawn({
+        let thread = thread::Builder::new().name("trybuild-flock".to_owned());
+        thread.spawn({
             let done = Arc::clone(&done);
             move || poll(lockfile, done)
         })?;
