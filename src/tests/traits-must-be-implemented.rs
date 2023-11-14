@@ -63,23 +63,6 @@ error[E0599]: the method `anyhow_kind` exists for reference `&Error`, but its tr
           which is required by `&Error: anyhow::private::kind::TraitKind`
 note: the following traits must be implemented
  --> $RUST/core/src/convert/mod.rs
-  |
-  | / pub trait Into<T>: Sized {
-  | |     /// Performs the conversion.
-  | |     #[stable(feature = \"rust1\", since = \"1.0.0\")]
-  | |     fn into(self) -> T;
-  | | }
-  | |_^
-  |
  ::: $RUST/core/src/fmt/mod.rs
-  |
-  | / pub trait Display {
-  | |     /// Formats the value using the given formatter.
-  | |     ///
-  | |     /// # Examples
-... |
-  | |     fn fmt(&self, f: &mut Formatter<'_>) -> Result;
-  | | }
-  | |_^
   = note: this error originates in the macro `anyhow` (in Nightly builds, run with -Z macro-backtrace for more info)
 "}

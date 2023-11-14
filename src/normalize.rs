@@ -58,6 +58,7 @@ normalizations! {
     AndOthers,
     StripLongTypeNameFiles,
     UnindentAfterHelp,
+    StripRustSrc,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -130,6 +131,7 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
         normalization,
         context,
         hide_numbers: 0,
+        numbers_to_hide_are_rust_src: false,
     };
     for i in 0..lines.len() {
         if let Some(line) = filter.apply(i) {
@@ -150,6 +152,7 @@ struct Filter<'a> {
     normalization: Normalization,
     context: Context<'a>,
     hide_numbers: usize,
+    numbers_to_hide_are_rust_src: bool,
 }
 
 impl<'a> Filter<'a> {
@@ -157,8 +160,13 @@ impl<'a> Filter<'a> {
         let mut line = self.all_lines[index].to_owned();
 
         if self.hide_numbers > 0 {
-            hide_leading_numbers(&mut line);
             self.hide_numbers -= 1;
+            if self.numbers_to_hide_are_rust_src && self.normalization >= StripRustSrc {
+                // strip rust src lines as default rustup installs do not contain rust src
+                return None;
+            } else {
+                hide_leading_numbers(&mut line);
+            }
         }
 
         let trim_start = line.trim_start();
@@ -195,6 +203,7 @@ impl<'a> Filter<'a> {
                 .to_ascii_lowercase()
                 .replace('\\', "/");
             let mut other_crate = false;
+            let mut is_rust_src = false;
             if line_lower.find(&target_dir_pat) == Some(indent + 4) {
                 let mut offset = indent + 4 + target_dir_pat.len();
                 let mut out_dir_crate_name = None;
@@ -274,12 +283,12 @@ impl<'a> Filter<'a> {
                     // --> /home/.rustup/toolchains/nightly/lib/rustlib/src/rust/src/libstd/net/ip.rs:83:1
                     // --> $RUST/src/libstd/net/ip.rs:83:1
                     line.replace_range(indent + 4..pos + 17, "$RUST");
-                    other_crate = true;
+                    is_rust_src = true;
                 } else if let Some(pos) = line.find("/rustlib/src/rust/library/") {
                     // --> /home/.rustup/toolchains/nightly/lib/rustlib/src/rust/library/std/src/net/ip.rs:83:1
                     // --> $RUST/std/src/net/ip.rs:83:1
                     line.replace_range(indent + 4..pos + 25, "$RUST");
-                    other_crate = true;
+                    is_rust_src = true;
                 } else if line[indent + 4..].starts_with("/rustc/")
                     && line
                         .get(indent + 11..indent + 51)
@@ -289,7 +298,7 @@ impl<'a> Filter<'a> {
                     // --> /rustc/c5c7d2b37780dac1092e75f12ab97dd56c30861e/library/std/src/net/ip.rs:83:1
                     // --> $RUST/std/src/net/ip.rs:83:1
                     line.replace_range(indent + 4..indent + 59, "$RUST");
-                    other_crate = true;
+                    is_rust_src = true;
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
@@ -311,14 +320,15 @@ impl<'a> Filter<'a> {
                     }
                 }
             }
-            if other_crate && self.normalization >= WorkspaceLines {
+            if (other_crate || is_rust_src) && self.normalization >= WorkspaceLines {
                 // Blank out line numbers for this particular error since rustc
                 // tends to reach into code from outside of the test case. The
                 // test stderr shouldn't need to be updated every time we touch
                 // those files.
                 hide_trailing_numbers(&mut line);
-                self.hide_numbers = 1;
-                while let Some(next_line) = self.all_lines.get(index + self.hide_numbers) {
+                self.numbers_to_hide_are_rust_src = is_rust_src;
+                self.hide_numbers = 0;
+                while let Some(next_line) = self.all_lines.get(index + self.hide_numbers + 1) {
                     match next_line.trim_start().chars().next().unwrap_or_default() {
                         '0'..='9' | '|' | '.' => self.hide_numbers += 1,
                         _ => break,

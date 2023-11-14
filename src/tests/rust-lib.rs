@@ -23,9 +23,4 @@ error[E0599]: no method named `quote_into_iter` found for struct `std::net::Ipv4
   |
  ::: $RUST/src/libstd/net/ip.rs
  ::: $RUST/std/src/net/ip.rs
-  |
-  | pub struct Ipv4Addr {
-  | -------------------
-  | |
-  | doesn't satisfy `std::net::Ipv4Addr: quote::to_tokens::ToTokens`
 "}

@@ -32,8 +32,5 @@ error[E0599]: the method `to_cxx_exception` exists for reference `&NonError`, bu
           which is required by `&NonError: ToCxxExceptionDefault`
 note: the trait `std::fmt::Display` must be implemented
  --> $RUST/core/src/fmt/mod.rs
-  |
-  | pub trait Display {
-  | ^^^^^^^^^^^^^^^^^
   = note: this error originates in the macro `::cxx::map_rust_error_to_cxx_exception` (in Nightly builds, run with -Z macro-backtrace for more info)
 "}

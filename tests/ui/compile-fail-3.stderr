@@ -1,9 +1,20 @@
 error[E0277]: `*mut _` cannot be shared between threads safely
-   --> tests/ui/compile-fail-3.rs:7:5
-    |
-7   |     thread::spawn(|| {
-    |     ^^^^^^^^^^^^^ `*mut _` cannot be shared between threads safely
-    |
-    = help: the trait `Sync` is not implemented for `*mut _`
-    = note: required because of the requirements on the impl of `Send` for `&*mut _`
-    = note: required because it appears within the type `[closure@$DIR/tests/ui/compile-fail-3.rs:7:19: 9:6]`
+ --> tests/ui/compile-fail-3.rs:7:19
+  |
+7 |       thread::spawn(|| {
+  |  _____-------------_^
+  | |     |
+  | |     required by a bound introduced by this call
+8 | |         println!("{:?}", x)
+9 | |     });
+  | |_____^ `*mut _` cannot be shared between threads safely
+  |
+  = help: the trait `Sync` is not implemented for `*mut _`
+  = note: required for `&*mut _` to implement `Send`
+note: required because it's used within this closure
+ --> tests/ui/compile-fail-3.rs:7:19
+  |
+7 |     thread::spawn(|| {
+  |                   ^^
+note: required by a bound in `spawn`
+ --> $RUST/std/src/thread/mod.rs
