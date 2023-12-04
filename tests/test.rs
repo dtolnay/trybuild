@@ -42,3 +42,9 @@ fn test_api() {
         "compile_error!(\"tadam",
     );
 }
+
+#[test]
+fn with_suffix() {
+    let t = trybuild2::TestCases::with_suffix("suffixed");
+    t.compile_fail("tests/ui/compile-fail-1.rs");
+}

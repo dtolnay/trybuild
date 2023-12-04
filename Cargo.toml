@@ -30,6 +30,8 @@ termcolor = "1.0.4"
 
 [dev-dependencies]
 automod = "1.0.10"
+# Used in documentation code example.
+rustversion = "1.0.14"
 
 [lib]
 doc-scrape-examples = false

@@ -269,6 +269,7 @@ mod run;
 mod rustflags;
 
 use std::cell::RefCell;
+use std::ffi::OsString;
 use std::panic::RefUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -280,6 +281,7 @@ pub struct TestCases {
 
 #[derive(Debug)]
 struct Runner {
+    suffix: Option<OsString>,
     tests: Vec<Test>,
 }
 
@@ -315,7 +317,35 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner {
+                suffix: None,
+                tests: Vec::new(),
+            }),
+        }
+    }
+
+    /// Will add a custom suffix to stderr files.
+    ///
+    /// This can be useful to test both nightly and stable outputs.
+    /// ```no_run
+    /// # use trybuild2::TestCases;
+    /// #[rustversion::nightly]
+    /// fn nightly() {
+    ///     let runner = TestCases::with_suffix("nightly");
+    ///     // ...
+    /// }
+    /// #[rustversion::stable]
+    /// fn stable() {
+    ///     let runner = TestCases::with_suffix("stable");
+    ///     // ...
+    /// }
+    /// ```
+    pub fn with_suffix(suffix: impl Into<OsString>) -> Self {
+        TestCases {
+            runner: RefCell::new(Runner {
+                suffix: Some(suffix.into()),
+                tests: Vec::new(),
+            }),
         }
     }
 

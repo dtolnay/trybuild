@@ -33,6 +33,8 @@ pub struct Project {
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
     pub keep_going: bool,
+    /// Added to stderr path
+    suffix: Option<OsString>,
 }
 
 #[derive(Debug)]
@@ -181,6 +183,7 @@ impl Runner {
             path_dependencies,
             manifest,
             keep_going: false,
+            suffix: self.suffix.clone(),
         })
     }
 
@@ -559,7 +562,16 @@ impl Test {
             return Err(Error::ShouldNotHaveCompiled);
         }
 
-        let stderr_path = stderr_path.unwrap_or_else(|| self.path.with_extension("stderr"));
+        let mut stderr_path = stderr_path.unwrap_or_else(|| self.path.with_extension("stderr"));
+
+        // make `a.stderr` to `a.suffix.stderr` and `a` to `a.suffix`
+        if let Some(mut suffix) = project.suffix.clone() {
+            if let Some(ext) = stderr_path.extension() {
+                suffix.push(".");
+                suffix.push(ext);
+            }
+            stderr_path.set_extension(suffix);
+        }
 
         if !stderr_path.exists() {
             let outcome = match project.update {
