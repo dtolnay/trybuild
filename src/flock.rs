@@ -1,3 +1,4 @@
+use crate::error::Result;
 use once_cell::sync::OnceCell;
 use std::fs::{self, File, OpenOptions};
 use std::io;
@@ -32,11 +33,11 @@ enum FileLock {
 }
 
 impl Lock {
-    pub fn acquire(path: impl AsRef<Path>) -> Self {
-        Lock {
+    pub fn acquire(path: impl AsRef<Path>) -> Result<Self> {
+        Ok(Lock {
             intraprocess_guard: Guard::acquire(),
-            lockfile: FileLock::acquire(path),
-        }
+            lockfile: FileLock::acquire(path)?,
+        })
     }
 }
 
@@ -51,18 +52,19 @@ impl Guard {
 }
 
 impl FileLock {
-    fn acquire(path: impl AsRef<Path>) -> Self {
+    fn acquire(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_owned();
         let lockfile = match create(&path) {
-            None => return FileLock::NotLocked,
+            None => return Ok(FileLock::NotLocked),
             Some(lockfile) => lockfile,
         };
         let done = Arc::new(AtomicBool::new(false));
-        thread::spawn({
+        let thread = thread::Builder::new().name("trybuild-flock".to_owned());
+        thread.spawn({
             let done = Arc::clone(&done);
             move || poll(lockfile, done)
-        });
-        FileLock::Locked { path, done }
+        })?;
+        Ok(FileLock::Locked { path, done })
     }
 }
 

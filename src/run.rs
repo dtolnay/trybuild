@@ -55,7 +55,7 @@ impl Runner {
 
         let (project, _lock) = (|| {
             let mut project = self.prepare(&tests)?;
-            let lock = Lock::acquire(path!(project.dir / ".lock"));
+            let lock = Lock::acquire(path!(project.dir / ".lock"))?;
             self.write(&mut project)?;
             Ok((project, lock))
         })()
@@ -198,7 +198,7 @@ impl Runner {
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
 
         let main_rs = b"\
-            #![allow(unknown_lints, unused_crate_dependencies, missing_docs)]\n\
+            #![allow(unused_crate_dependencies, missing_docs)]\n\
             fn main() {}\n\
         ";
         fs::write(path!(project.dir / "main.rs"), &main_rs[..])?;

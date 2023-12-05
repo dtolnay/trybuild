@@ -87,7 +87,6 @@ pub fn build_dependencies(project: &mut Project) -> Result<()> {
 
     // Check if this Cargo contains https://github.com/rust-lang/cargo/pull/10383
     project.keep_going = command
-        .arg("-Zunstable-options")
         .arg("--keep-going")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -139,7 +138,6 @@ pub fn build_all_tests(project: &Project) -> Result<Output> {
         .arg("--quiet")
         .arg("--color=never")
         .arg("--message-format=json")
-        .arg("-Zunstable-options")
         .arg("--keep-going")
         .output()
         .map_err(Error::Cargo)
