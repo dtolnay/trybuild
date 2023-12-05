@@ -220,7 +220,7 @@
 //! If you need  more control over the stderr check as well, you can take a
 //! look at `compile_fail_check_sub` and `compile_fail_inline_check_sub`.
 
-#![doc(html_root_url = "https://docs.rs/trybuild2/1.1.0")]
+#![doc(html_root_url = "https://docs.rs/trybuild2/1.2.0")]
 #![allow(
     clippy::collapsible_if,
     clippy::default_trait_access,
