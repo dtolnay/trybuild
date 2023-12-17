@@ -230,6 +230,7 @@
     clippy::test_attr_in_doctest,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
+    clippy::uninhabited_references,
     clippy::unused_self,
     clippy::while_let_on_iterator,
 )]
