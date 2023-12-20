@@ -5,7 +5,7 @@ use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::expand::{expand_globs, ExpandedTest};
 use crate::flock::Lock;
-use crate::manifest::{Bin, Build, Config, Edition, Manifest, Name, Package, Workspace};
+use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, rustflags, Expected, Runner, Test};
@@ -222,12 +222,6 @@ impl Runner {
                 .ok_or(Error::NoWorkspaceManifest)?,
         };
 
-        let cargo_features = if let Edition::E2024 = edition {
-            vec!["edition2024".to_owned()]
-        } else {
-            vec![]
-        };
-
         let mut dependencies = Map::new();
         dependencies.extend(source_manifest.dependencies);
         dependencies.extend(source_manifest.dev_dependencies);
@@ -292,7 +286,7 @@ impl Runner {
         }
 
         let mut manifest = Manifest {
-            cargo_features,
+            cargo_features: source_manifest.cargo_features,
             package: Package {
                 name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
