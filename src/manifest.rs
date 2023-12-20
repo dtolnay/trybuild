@@ -7,6 +7,8 @@ use std::path::PathBuf;
 
 #[derive(Serialize, Debug)]
 pub struct Manifest {
+    #[serde(rename = "cargo-features")]
+    pub cargo_features: Vec<String>,
     pub package: Package,
     #[serde(skip_serializing_if = "Map::is_empty")]
     pub features: Map<String, Vec<String>>,
@@ -44,6 +46,8 @@ pub enum Edition {
     E2018,
     #[serde(rename = "2021")]
     E2021,
+    #[serde(rename = "2024")]
+    E2024,
 }
 
 #[derive(Serialize, Debug)]
