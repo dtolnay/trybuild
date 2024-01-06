@@ -19,7 +19,7 @@ pub struct Lock {
 // integration test crate.
 enum Guard {
     NotLocked,
-    Locked(MutexGuard<'static, ()>),
+    Locked(#[allow(dead_code)] MutexGuard<'static, ()>),
 }
 
 // Best-effort filesystem lock to coordinate different #[test] functions across
