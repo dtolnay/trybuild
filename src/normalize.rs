@@ -336,6 +336,12 @@ impl<'a> Filter<'a> {
             return None;
         }
 
+        if trim_start.starts_with("= note: this compiler was built on 2")
+            && trim_start.ends_with("; consider upgrading it if it is out of date")
+        {
+            return None;
+        }
+
         if self.normalization >= StripCouldNotCompile {
             if line.starts_with("error: Could not compile `") {
                 return None;
