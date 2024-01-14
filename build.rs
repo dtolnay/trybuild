@@ -4,7 +4,7 @@ use std::io;
 use std::path::Path;
 
 fn main() -> io::Result<()> {
-    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/tests");
 
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let target = env::var("TARGET").ok();
