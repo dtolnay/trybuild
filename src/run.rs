@@ -181,10 +181,10 @@ impl Runner {
     }
 
     fn write(&self, project: &mut Project) -> Result<()> {
-        let manifest_toml = basic_toml::to_string(&project.manifest)?;
+        let manifest_toml = toml::to_string(&project.manifest)?;
 
         let config = self.make_config();
-        let config_toml = basic_toml::to_string(&config)?;
+        let config_toml = toml::to_string(&config)?;
 
         fs::create_dir_all(path!(project.dir / ".cargo"))?;
         fs::write(path!(project.dir / ".cargo" / "config.toml"), config_toml)?;
