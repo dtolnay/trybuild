@@ -9,21 +9,21 @@ use std::process::{Command, Output, Stdio};
 use std::{env, fs, iter};
 
 #[derive(Deserialize)]
-pub struct Metadata {
+pub(crate) struct Metadata {
     pub target_directory: Directory,
     pub workspace_root: Directory,
     pub packages: Vec<PackageMetadata>,
 }
 
 #[derive(Deserialize)]
-pub struct PackageMetadata {
+pub(crate) struct PackageMetadata {
     pub name: String,
     pub targets: Vec<BuildTarget>,
     pub manifest_path: PathBuf,
 }
 
 #[derive(Deserialize)]
-pub struct BuildTarget {
+pub(crate) struct BuildTarget {
     pub crate_types: Vec<String>,
 }
 
@@ -51,7 +51,7 @@ fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, Pa
     ))
 }
 
-pub fn manifest_dir() -> Result<Directory> {
+pub(crate) fn manifest_dir() -> Result<Directory> {
     if let Some(manifest_dir) = env::var_os("CARGO_MANIFEST_DIR") {
         return Ok(Directory::from(manifest_dir));
     }
@@ -64,7 +64,7 @@ pub fn manifest_dir() -> Result<Directory> {
     }
 }
 
-pub fn build_dependencies(project: &mut Project) -> Result<()> {
+pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {
         let _ = fs::copy(workspace_cargo_lock, path!(project.dir / "Cargo.lock"));
@@ -97,7 +97,7 @@ pub fn build_dependencies(project: &mut Project) -> Result<()> {
     Ok(())
 }
 
-pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
+pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
     let _ = cargo(project)
         .arg("clean")
         .arg("--package")
@@ -120,7 +120,7 @@ pub fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub fn build_all_tests(project: &Project) -> Result<Output> {
+pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
     let _ = cargo(project)
         .arg("clean")
         .arg("--package")
@@ -143,7 +143,7 @@ pub fn build_all_tests(project: &Project) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
+pub(crate) fn run_test(project: &Project, name: &Name) -> Result<Output> {
     cargo(project)
         .arg("run")
         .args(target())
@@ -156,7 +156,7 @@ pub fn run_test(project: &Project, name: &Name) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub fn metadata() -> Result<Metadata> {
+pub(crate) fn metadata() -> Result<Metadata> {
     let output = raw_cargo()
         .arg("metadata")
         .arg("--no-deps")

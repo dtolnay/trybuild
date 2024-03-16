@@ -5,7 +5,7 @@ use std::io;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub enum Error {
+pub(crate) enum Error {
     Cargo(io::Error),
     CargoFail,
     GetManifest(PathBuf, Box<Error>),
@@ -25,7 +25,7 @@ pub enum Error {
     WriteStderr(io::Error),
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub(crate) type Result<T> = std::result::Result<T, Error>;
 
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

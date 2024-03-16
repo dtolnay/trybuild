@@ -1,6 +1,6 @@
-pub use self::r#impl::Diff;
+pub(crate) use self::r#impl::Diff;
 
-pub enum Render<'a> {
+pub(crate) enum Render<'a> {
     Common(&'a str),
     Unique(&'a str),
 }
@@ -12,7 +12,7 @@ mod r#impl {
     use std::cmp;
     use std::panic;
 
-    pub struct Diff<'a> {
+    pub(crate) struct Diff<'a> {
         expected: &'a str,
         actual: &'a str,
         diff: Vec<Chunk<'a>>,
@@ -66,7 +66,7 @@ mod r#impl {
 mod r#impl {
     use super::Render;
 
-    pub enum Diff {}
+    pub(crate) enum Diff {}
 
     impl Diff {
         pub fn compute(_expected: &str, _actual: &str) -> Option<Self> {

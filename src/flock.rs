@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime};
 
 static LOCK: OnceCell<Mutex<()>> = OnceCell::new();
 
-pub struct Lock {
+pub(crate) struct Lock {
     intraprocess_guard: Guard,
     lockfile: FileLock,
 }

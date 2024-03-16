@@ -13,7 +13,7 @@ use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 
-pub fn get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
+pub(crate) fn get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let mut manifest = (|| {
         let manifest_str = fs::read_to_string(&cargo_toml_path)?;
@@ -32,11 +32,13 @@ pub fn get_manifest(manifest_dir: &Directory) -> Result<Manifest, Error> {
     Ok(manifest)
 }
 
-pub fn get_workspace_manifest(manifest_dir: &Directory) -> WorkspaceManifest {
+pub(crate) fn get_workspace_manifest(manifest_dir: &Directory) -> WorkspaceManifest {
     try_get_workspace_manifest(manifest_dir).unwrap_or_default()
 }
 
-pub fn try_get_workspace_manifest(manifest_dir: &Directory) -> Result<WorkspaceManifest, Error> {
+pub(crate) fn try_get_workspace_manifest(
+    manifest_dir: &Directory,
+) -> Result<WorkspaceManifest, Error> {
     let cargo_toml_path = manifest_dir.join("Cargo.toml");
     let manifest_str = fs::read_to_string(cargo_toml_path)?;
     let mut manifest: WorkspaceManifest = basic_toml::from_str(&manifest_str)?;
@@ -72,7 +74,7 @@ fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Directory) {
 }
 
 #[derive(Deserialize, Default, Debug)]
-pub struct WorkspaceManifest {
+pub(crate) struct WorkspaceManifest {
     #[serde(default)]
     pub workspace: WorkspaceWorkspace,
     #[serde(default)]
@@ -82,7 +84,7 @@ pub struct WorkspaceManifest {
 }
 
 #[derive(Deserialize, Default, Debug)]
-pub struct WorkspaceWorkspace {
+pub(crate) struct WorkspaceWorkspace {
     #[serde(default)]
     pub package: WorkspacePackage,
     #[serde(default)]
@@ -90,12 +92,12 @@ pub struct WorkspaceWorkspace {
 }
 
 #[derive(Deserialize, Default, Debug)]
-pub struct WorkspacePackage {
+pub(crate) struct WorkspacePackage {
     pub edition: Option<Edition>,
 }
 
 #[derive(Deserialize, Default, Debug)]
-pub struct Manifest {
+pub(crate) struct Manifest {
     #[serde(rename = "cargo-features", default)]
     pub cargo_features: Vec<String>,
     #[serde(default)]
@@ -111,7 +113,7 @@ pub struct Manifest {
 }
 
 #[derive(Deserialize, Default, Debug)]
-pub struct Package {
+pub(crate) struct Package {
     pub name: String,
     #[serde(default)]
     pub edition: EditionOrInherit,
@@ -119,14 +121,14 @@ pub struct Package {
 }
 
 #[derive(Debug)]
-pub enum EditionOrInherit {
+pub(crate) enum EditionOrInherit {
     Edition(Edition),
     Inherit,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(remote = "Self")]
-pub struct Dependency {
+pub(crate) struct Dependency {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -156,7 +158,7 @@ pub struct Dependency {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct TargetDependencies {
+pub(crate) struct TargetDependencies {
     #[serde(default, skip_serializing_if = "Map::is_empty")]
     pub dependencies: Map<String, Dependency>,
     #[serde(
@@ -169,12 +171,12 @@ pub struct TargetDependencies {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
-pub struct RegistryPatch {
+pub(crate) struct RegistryPatch {
     pub crates: Map<String, Patch>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Patch {
+pub(crate) struct Patch {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -4,7 +4,7 @@ use std::ffi::OsString;
 const RUSTFLAGS: &str = "RUSTFLAGS";
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
-pub fn make_vec() -> Vec<&'static str> {
+pub(crate) fn make_vec() -> Vec<&'static str> {
     let mut rustflags = vec!["--cfg", "trybuild"];
 
     for &lint in IGNORED_LINTS {
@@ -15,7 +15,7 @@ pub fn make_vec() -> Vec<&'static str> {
     rustflags
 }
 
-pub fn envs() -> impl IntoIterator<Item = (&'static str, OsString)> {
+pub(crate) fn envs() -> impl IntoIterator<Item = (&'static str, OsString)> {
     let mut rustflags = env::var_os(RUSTFLAGS)?;
 
     for flag in make_vec() {
