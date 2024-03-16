@@ -257,6 +257,7 @@ mod message;
 mod normalize;
 mod run;
 mod rustflags;
+mod toml;
 
 use std::cell::RefCell;
 use std::panic::RefUnwindSafe;
