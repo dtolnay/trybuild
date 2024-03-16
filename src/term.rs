@@ -5,25 +5,25 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream as Stream, WriteCo
 
 static TERM: OnceCell<Mutex<Term>> = OnceCell::new();
 
-pub fn lock() -> MutexGuard<'static, Term> {
+pub(crate) fn lock() -> MutexGuard<'static, Term> {
     TERM.get_or_init(|| Mutex::new(Term::new()))
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
 }
 
-pub fn bold() {
+pub(crate) fn bold() {
     lock().set_color(ColorSpec::new().set_bold(true));
 }
 
-pub fn color(color: Color) {
+pub(crate) fn color(color: Color) {
     lock().set_color(ColorSpec::new().set_fg(Some(color)));
 }
 
-pub fn bold_color(color: Color) {
+pub(crate) fn bold_color(color: Color) {
     lock().set_color(ColorSpec::new().set_bold(true).set_fg(Some(color)));
 }
 
-pub fn reset() {
+pub(crate) fn reset() {
     lock().reset();
 }
 
@@ -43,7 +43,7 @@ macro_rules! println {
     }};
 }
 
-pub struct Term {
+pub(crate) struct Term {
     spec: ColorSpec,
     stream: Stream,
     start_of_line: bool,

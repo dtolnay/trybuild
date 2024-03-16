@@ -6,7 +6,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 
-pub fn find() -> Option<Vec<String>> {
+pub(crate) fn find() -> Option<Vec<String>> {
     try_find().ok()
 }
 
