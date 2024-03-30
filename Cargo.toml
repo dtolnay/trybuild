@@ -10,7 +10,7 @@ exclude = ["screenshots/*"]
 keywords = ["macros", "testing", "dev-dependencies"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dtolnay/trybuild"
-rust-version = "1.56"
+rust-version = "1.70"
 
 [features]
 # Experimental: highlight the diff between the expected and actual compiler
