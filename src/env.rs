@@ -1,16 +1,11 @@
 use crate::error::{Error, Result};
 use std::env;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Default, Debug)]
 pub(crate) enum Update {
+    #[default]
     Wip,
     Overwrite,
-}
-
-impl Default for Update {
-    fn default() -> Self {
-        Update::Wip
-    }
 }
 
 impl Update {
