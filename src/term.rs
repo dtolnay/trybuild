@@ -1,9 +1,8 @@
-use once_cell::sync::OnceCell;
 use std::io::{Result, Write};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream as Stream, WriteColor};
 
-static TERM: OnceCell<Mutex<Term>> = OnceCell::new();
+static TERM: OnceLock<Mutex<Term>> = OnceLock::new();
 
 pub(crate) fn lock() -> MutexGuard<'static, Term> {
     TERM.get_or_init(|| Mutex::new(Term::new()))
