@@ -264,9 +264,8 @@ impl Runner {
         let mut features = source_manifest.features;
         for (feature, enables) in &mut features {
             enables.retain(|en| {
-                let dep_name = match en.strip_prefix("dep:") {
-                    Some(dep_name) => dep_name,
-                    None => return false,
+                let Some(dep_name) = en.strip_prefix("dep:") else {
+                    return false;
                 };
                 if let Some(Dependency { optional: true, .. }) = dependencies.get(dep_name) {
                     return true;
@@ -622,9 +621,8 @@ fn parse_cargo_json(
     let mut remaining = &*String::from_utf8_lossy(stdout);
     let mut seen = Set::new();
     while !remaining.is_empty() {
-        let begin = match remaining.find("{\"reason\":") {
-            Some(begin) => begin,
-            None => break,
+        let Some(begin) = remaining.find("{\"reason\":") else {
+            break;
         };
         let (nonmessage, rest) = remaining.split_at(begin);
         nonmessage_stdout.push_str(nonmessage);
@@ -643,9 +641,8 @@ fn parse_cargo_json(
         }
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" {
-                let (name, test) = match path_map.get(&de.target.src_path) {
-                    Some(test) => test,
-                    None => continue,
+                let Some((name, test)) = path_map.get(&de.target.src_path) else {
+                    continue;
                 };
                 let entry = map
                     .entry(de.target.src_path)
