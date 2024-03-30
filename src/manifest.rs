@@ -77,7 +77,7 @@ pub(crate) struct Workspace {
 
 impl Default for Edition {
     fn default() -> Self {
-        Edition::E2018
+        Edition::E2015
     }
 }
 
