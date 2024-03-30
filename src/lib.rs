@@ -231,6 +231,7 @@
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
     clippy::uninhabited_references,
+    clippy::uninlined_format_args,
     clippy::unused_self,
     clippy::while_let_on_iterator,
 )]
