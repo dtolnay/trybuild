@@ -115,9 +115,8 @@ fn create(path: &Path) -> Option<File> {
             },
         };
 
-        let modified = match metadata.modified() {
-            Ok(modified) => modified,
-            Err(_) => return None,
+        let Ok(modified) = metadata.modified() else {
+            return None;
         };
 
         let now = SystemTime::now();

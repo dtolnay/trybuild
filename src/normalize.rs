@@ -516,9 +516,8 @@ fn unindent(diag: String, normalization: Normalization) -> String {
         }
 
         let mut ahead = lines.clone();
-        let next_line = match ahead.next() {
-            Some(line) => line,
-            None => continue,
+        let Some(next_line) = ahead.next() else {
+            continue;
         };
 
         if let IndentedLineKind::Code(indent) = indented_line_kind(next_line, normalization) {
