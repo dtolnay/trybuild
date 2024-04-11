@@ -75,7 +75,7 @@ To test just one source file, use:
 ```
 cargo test -- ui trybuild=example.rs
 ```
-where `ui` is the name of the `#[test]` funtion that invokes `trybuild`, and
+where `ui` is the name of the `#[test]` function that invokes `trybuild`, and
 `example.rs` is the name of the file to test.
 
 <br>
