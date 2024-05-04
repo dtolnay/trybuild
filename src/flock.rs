@@ -1,14 +1,13 @@
 use crate::error::Result;
-use once_cell::sync::OnceCell;
 use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-static LOCK: OnceCell<Mutex<()>> = OnceCell::new();
+static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub(crate) struct Lock {
     intraprocess_guard: Guard,
