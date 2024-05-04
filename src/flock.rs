@@ -3,11 +3,11 @@ use std::fs::{self, File, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+static LOCK: Mutex<()> = Mutex::new(());
 
 pub(crate) struct Lock {
     intraprocess_guard: Guard,
@@ -42,11 +42,7 @@ impl Lock {
 
 impl Guard {
     fn acquire() -> Self {
-        Guard::Locked(
-            LOCK.get_or_init(|| Mutex::new(()))
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner),
-        )
+        Guard::Locked(LOCK.lock().unwrap_or_else(PoisonError::into_inner))
     }
 }
 
