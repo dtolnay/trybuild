@@ -401,7 +401,9 @@ impl<'a> Filter<'a> {
             let trimmed_line = trimmed_line
                 .strip_prefix("= note: ")
                 .unwrap_or(trimmed_line);
-            if trimmed_line.starts_with("the full type name has been written to") {
+            if trimmed_line.starts_with("the full type name has been written to")
+                || trimmed_line.starts_with("the full name for the type has been written to")
+            {
                 return None;
             }
         }
