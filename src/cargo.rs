@@ -41,6 +41,7 @@ fn cargo(project: &Project) -> Command {
     cmd.envs(rustflags::envs());
     cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
+    cmd.arg("--config=build.rustflags=[\"--verbose\"]");
     cmd
 }
 
