@@ -75,7 +75,11 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
 
     let mut command = cargo(project);
     command
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.has_pass || project.has_pass_test {
+            "build"
+        } else {
+            "check"
+        })
         .args(target())
         .arg("--bin")
         .arg(&project.name)
@@ -109,7 +113,11 @@ pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .status();
 
     cargo(project)
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.has_pass || project.has_pass_test {
+            "build"
+        } else {
+            "check"
+        })
         .args(target())
         .arg("--bin")
         .arg(name)
@@ -132,7 +140,11 @@ pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
         .status();
 
     cargo(project)
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.has_pass || project.has_pass_test {
+            "build"
+        } else {
+            "check"
+        })
         .args(target())
         .arg("--bins")
         .args(features(project))
@@ -144,9 +156,22 @@ pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
         .map_err(Error::Cargo)
 }
 
-pub(crate) fn run_test(project: &Project, name: &Name) -> Result<Output> {
+pub(crate) fn run(project: &Project, name: &Name) -> Result<Output> {
     cargo(project)
         .arg("run")
+        .args(target())
+        .arg("--bin")
+        .arg(name)
+        .args(features(project))
+        .arg("--quiet")
+        .arg("--color=never")
+        .output()
+        .map_err(Error::Cargo)
+}
+
+pub(crate) fn test(project: &Project, name: &Name) -> Result<Output> {
+    cargo(project)
+        .arg("test")
         .args(target())
         .arg("--bin")
         .arg(name)

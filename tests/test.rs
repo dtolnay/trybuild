@@ -19,4 +19,6 @@ fn test() {
     t.pass("tests/ui/run-pass-9.rs");
     t.compile_fail("tests/ui/compile-fail-2.rs");
     t.compile_fail("tests/ui/compile-fail-3.rs");
+    t.pass_test("tests/ui/pass-test-1.rs");
+    t.pass_test("tests/ui/pass-test-2.rs");
 }

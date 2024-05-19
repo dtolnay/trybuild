@@ -62,6 +62,7 @@ pub(crate) fn begin_test(test: &Test, show_expected: bool) {
         match test.expected {
             Expected::Pass => print!(" [should pass]"),
             Expected::CompileFail => print!(" [should fail to compile]"),
+            Expected::PassTest => print!(" [should pass test]"),
         }
     }
 

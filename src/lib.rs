@@ -284,6 +284,7 @@ struct Test {
 enum Expected {
     Pass,
     CompileFail,
+    PassTest,
 }
 
 impl TestCases {
@@ -305,6 +306,13 @@ impl TestCases {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
+        });
+    }
+
+    pub fn pass_test<P: AsRef<Path>>(&self, path: P) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::PassTest,
         });
     }
 }

@@ -27,6 +27,7 @@ pub(crate) struct Project {
     update: Update,
     pub has_pass: bool,
     has_compile_fail: bool,
+    pub has_pass_test: bool,
     pub features: Option<Vec<String>>,
     pub workspace: Directory,
     pub path_dependencies: Vec<PathDependency>,
@@ -117,10 +118,12 @@ impl Runner {
 
         let mut has_pass = false;
         let mut has_compile_fail = false;
+        let mut has_pass_test = false;
         for e in tests {
             match e.test.expected {
                 Expected::Pass => has_pass = true,
                 Expected::CompileFail => has_compile_fail = true,
+                Expected::PassTest => has_pass_test = true,
             }
         }
 
@@ -172,6 +175,7 @@ impl Runner {
             update: Update::env()?,
             has_pass,
             has_compile_fail,
+            has_pass_test,
             features,
             workspace,
             path_dependencies,
@@ -407,6 +411,7 @@ impl Test {
         let check = match self.expected {
             Expected::Pass => Test::check_pass,
             Expected::CompileFail => Test::check_compile_fail,
+            Expected::PassTest => Test::check_pass_test,
         };
 
         check(
@@ -433,7 +438,7 @@ impl Test {
             return Err(Error::CargoFail);
         }
 
-        let mut output = cargo::run_test(project, name)?;
+        let mut output = cargo::run(project, name)?;
         output.stdout.splice(..0, build_stdout.bytes());
         message::output(preferred, &output);
         if output.status.success() {
@@ -506,6 +511,30 @@ impl Test {
                 fs::write(stderr_path, preferred).map_err(Error::WriteStderr)?;
                 Ok(Outcome::Passed)
             }
+        }
+    }
+
+    fn check_pass_test(
+        &self,
+        project: &Project,
+        name: &Name,
+        success: bool,
+        build_stdout: &str,
+        variations: &Variations,
+    ) -> Result<Outcome> {
+        let preferred = variations.preferred();
+        if !success {
+            message::failed_to_build(preferred);
+            return Err(Error::CargoFail);
+        }
+
+        let mut output = cargo::test(project, name)?;
+        output.stdout.splice(..0, build_stdout.bytes());
+        message::output(preferred, &output);
+        if output.status.success() {
+            Ok(Outcome::Passed)
+        } else {
+            Err(Error::RunFailed)
         }
     }
 }
