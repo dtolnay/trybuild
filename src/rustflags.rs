@@ -1,27 +1,12 @@
-use std::env;
-use std::ffi::OsString;
-
-const RUSTFLAGS: &str = "RUSTFLAGS";
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
-pub(crate) fn make_vec() -> Vec<&'static str> {
-    let mut rustflags = vec!["--cfg", "trybuild"];
+pub(crate) fn toml() -> toml::Value {
+    let mut rustflags = vec!["--cfg", "trybuild", "--verbose"];
 
     for &lint in IGNORED_LINTS {
         rustflags.push("-A");
         rustflags.push(lint);
     }
 
-    rustflags
-}
-
-pub(crate) fn envs() -> impl IntoIterator<Item = (&'static str, OsString)> {
-    let mut rustflags = env::var_os(RUSTFLAGS)?;
-
-    for flag in make_vec() {
-        rustflags.push(" ");
-        rustflags.push(flag);
-    }
-
-    Some((RUSTFLAGS, rustflags))
+    toml::Value::try_from(rustflags).unwrap()
 }

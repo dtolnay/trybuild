@@ -61,16 +61,6 @@ pub(crate) struct Bin {
 pub(crate) struct Name(pub String);
 
 #[derive(Serialize, Debug)]
-pub(crate) struct Config {
-    pub build: Build,
-}
-
-#[derive(Serialize, Debug)]
-pub(crate) struct Build {
-    pub rustflags: Vec<&'static str>,
-}
-
-#[derive(Serialize, Debug)]
 pub(crate) struct Workspace {
     #[serde(skip_serializing_if = "Map::is_empty")]
     pub dependencies: Map<String, Dependency>,

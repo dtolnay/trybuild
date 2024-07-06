@@ -38,10 +38,10 @@ fn cargo(project: &Project) -> Command {
     let mut cmd = raw_cargo();
     cmd.current_dir(&project.dir);
     cmd.envs(cargo_target_dir(project));
-    cmd.envs(rustflags::envs());
+    cmd.env_remove("RUSTFLAGS");
     cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
-    cmd.arg("--config=build.rustflags=[\"--verbose\"]");
+    cmd.arg(format!("--config=build.rustflags={}", rustflags::toml()));
     cmd
 }
 
