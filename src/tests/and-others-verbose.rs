@@ -138,8 +138,7 @@ error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
              (T0, T1)
              (T0, T1, T2)
              (T0, T1, T2, T3)
-             (T0, T1, T2, T3, T4)
-             (T0, T1, T2, T3, T4, T5)
+           and $N others
 note: required by a bound in `from_str`
   --> tests/ui/on_unimplemented.rs:13:8
    |

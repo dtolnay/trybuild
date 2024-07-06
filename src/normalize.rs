@@ -58,6 +58,7 @@ normalizations! {
     AndOthers,
     StripLongTypeNameFiles,
     UnindentAfterHelp,
+    AndOthersVerbose,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -130,6 +131,7 @@ fn apply(original: &str, normalization: Normalization, context: Context) -> Stri
         normalization,
         context,
         hide_numbers: 0,
+        other_types: None,
     };
     for i in 0..lines.len() {
         if let Some(line) = filter.apply(i) {
@@ -150,6 +152,7 @@ struct Filter<'a> {
     normalization: Normalization,
     context: Context<'a>,
     hide_numbers: usize,
+    other_types: Option<usize>,
 }
 
 impl<'a> Filter<'a> {
@@ -405,6 +408,32 @@ impl<'a> Filter<'a> {
                 || trimmed_line.starts_with("the full name for the type has been written to")
             {
                 return None;
+            }
+        }
+
+        if self.normalization >= AndOthersVerbose {
+            let trim_start = line.trim_start();
+            if trim_start.starts_with("= help: the following types implement trait ")
+                || trim_start.starts_with("= help: the following other types implement trait ")
+            {
+                self.other_types = Some(0);
+            } else if let Some(count_other_types) = &mut self.other_types {
+                if indent >= 12 && trim_start != "and $N others" {
+                    *count_other_types += 1;
+                    if *count_other_types == 9 {
+                        if let Some(next) = self.all_lines.get(index + 1) {
+                            let next_trim_start = next.trim_start();
+                            let next_indent = next.len() - next_trim_start.len();
+                            if indent == next_indent {
+                                line.replace_range(indent - 2.., "and $N others");
+                            }
+                        }
+                    } else if *count_other_types > 9 {
+                        return None;
+                    }
+                } else {
+                    self.other_types = None;
+                }
             }
         }
 
