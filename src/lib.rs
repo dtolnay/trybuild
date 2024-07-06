@@ -211,6 +211,7 @@
 #![doc(html_root_url = "https://docs.rs/trybuild/1.0.96")]
 #![allow(
     clippy::collapsible_if,
+    clippy::comparison_chain,
     clippy::default_trait_access,
     clippy::derive_partial_eq_without_eq,
     clippy::doc_markdown,
