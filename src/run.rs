@@ -5,10 +5,10 @@ use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::expand::{expand_globs, ExpandedTest};
 use crate::flock::Lock;
-use crate::manifest::{Bin, Build, Config, Manifest, Name, Package, Workspace};
+use crate::manifest::{Bin, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
-use crate::{features, rustflags, Expected, Runner, Test};
+use crate::{features, Expected, Runner, Test};
 use serde_derive::Deserialize;
 use std::collections::{BTreeMap as Map, BTreeSet as Set};
 use std::env;
@@ -182,12 +182,6 @@ impl Runner {
 
     fn write(&self, project: &mut Project) -> Result<()> {
         let manifest_toml = toml::to_string(&project.manifest)?;
-
-        let config = self.make_config();
-        let config_toml = toml::to_string(&config)?;
-
-        fs::create_dir_all(path!(project.dir / ".cargo"))?;
-        fs::write(path!(project.dir / ".cargo" / "config.toml"), config_toml)?;
         fs::write(path!(project.dir / "Cargo.toml"), manifest_toml)?;
 
         let main_rs = b"\
@@ -321,14 +315,6 @@ impl Runner {
         }
 
         Ok(manifest)
-    }
-
-    fn make_config(&self) -> Config {
-        Config {
-            build: Build {
-                rustflags: rustflags::make_vec(),
-            },
-        }
     }
 
     fn run_all(&self, project: &Project, tests: Vec<ExpandedTest>) -> Result<Report> {
