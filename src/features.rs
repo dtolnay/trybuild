@@ -1,5 +1,5 @@
-use serde::de::{self, Deserialize, DeserializeOwned, Deserializer};
-use serde_derive::Deserialize;
+use serde::de::{self, DeserializeOwned, Deserializer};
+use serde::Deserialize;
 use std::env;
 use std::error::Error;
 use std::ffi::OsStr;

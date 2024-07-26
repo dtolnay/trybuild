@@ -1,5 +1,5 @@
 use serde::de::{Deserialize, Deserializer};
-use serde_derive::Serialize;
+use serde::Serialize;
 use std::borrow::Cow;
 use std::env;
 use std::ffi::OsString;

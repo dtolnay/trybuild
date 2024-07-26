@@ -9,7 +9,7 @@ use crate::manifest::{Bin, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
 use crate::{features, Expected, Runner, Test};
-use serde_derive::Deserialize;
+use serde::Deserialize;
 use std::collections::{BTreeMap as Map, BTreeSet as Set};
 use std::env;
 use std::ffi::{OsStr, OsString};
