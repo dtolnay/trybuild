@@ -58,7 +58,7 @@
 //! <img src="https://user-images.githubusercontent.com/1940490/57186575-79418e80-6e96-11e9-9478-c9b3dc10327f.png" width="700">
 //! </p>
 //!
-//! A compile_fail test that fails to fail to compile is also a failure.
+//! A `compile_fail` test that fails to fail to compile is also a failure.
 //!
 //! <p align="center">
 //! <img src="https://user-images.githubusercontent.com/1940490/57186576-7b0b5200-6e96-11e9-8bfd-2de705125108.png" width="700">
@@ -112,7 +112,7 @@
 //! There are two ways to update the _*.stderr_ files as you iterate on your
 //! test cases or your library; handwriting them is not recommended.
 //!
-//! First, if a test case is being run as compile_fail but a corresponding
+//! First, if a test case is being run as `compile_fail` but a corresponding
 //! _*.stderr_ file does not exist, the test runner will save the actual
 //! compiler output with the right filename into a directory called *wip* within
 //! the directory containing Cargo.toml. So you can update these files by
