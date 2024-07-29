@@ -191,10 +191,6 @@ fn get_true() -> bool {
     true
 }
 
-fn is_true(boolean: &bool) -> bool {
-    *boolean
-}
-
 fn is_false(boolean: &bool) -> bool {
     !*boolean
 }
