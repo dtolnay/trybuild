@@ -135,11 +135,7 @@ pub(crate) struct Dependency {
     pub path: Option<Directory>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub optional: bool,
-    #[serde(
-        rename = "default-features",
-        default = "get_true",
-        skip_serializing_if = "is_true"
-    )]
+    #[serde(rename = "default-features", default = "get_true")]
     pub default_features: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
@@ -193,10 +189,6 @@ pub(crate) struct Patch {
 
 fn get_true() -> bool {
     true
-}
-
-fn is_true(boolean: &bool) -> bool {
-    *boolean
 }
 
 fn is_false(boolean: &bool) -> bool {
