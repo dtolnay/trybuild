@@ -237,7 +237,7 @@ impl Runner {
                     version: None,
                     path: Some(source_dir.clone()),
                     optional: false,
-                    default_features: false,
+                    default_features: Some(false),
                     features: Vec::new(),
                     git: None,
                     branch: None,
