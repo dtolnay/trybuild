@@ -135,8 +135,8 @@ pub(crate) struct Dependency {
     pub path: Option<Directory>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub optional: bool,
-    #[serde(rename = "default-features", default = "get_true")]
-    pub default_features: bool,
+    #[serde(rename = "default-features", skip_serializing_if = "Option::is_none")]
+    pub default_features: Option<bool>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -185,10 +185,6 @@ pub(crate) struct Patch {
     pub rev: Option<String>,
     #[serde(flatten)]
     pub rest: Map<String, Value>,
-}
-
-fn get_true() -> bool {
-    true
 }
 
 fn is_false(boolean: &bool) -> bool {
@@ -269,7 +265,7 @@ impl<'de> Deserialize<'de> for Dependency {
                     version: Some(s.to_owned()),
                     path: None,
                     optional: false,
-                    default_features: true,
+                    default_features: Some(true),
                     features: Vec::new(),
                     git: None,
                     branch: None,
