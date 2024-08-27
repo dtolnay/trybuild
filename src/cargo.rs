@@ -99,15 +99,6 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
 }
 
 pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
-    let _ = cargo(project)
-        .arg("clean")
-        .arg("--package")
-        .arg(&project.name)
-        .arg("--color=never")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-
     cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())
@@ -122,15 +113,6 @@ pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
 }
 
 pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
-    let _ = cargo(project)
-        .arg("clean")
-        .arg("--package")
-        .arg(&project.name)
-        .arg("--color=never")
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
-
     cargo(project)
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())

@@ -252,7 +252,6 @@ mod env;
 mod error;
 mod expand;
 mod features;
-mod flock;
 mod inherit;
 mod manifest;
 mod message;

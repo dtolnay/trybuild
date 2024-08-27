@@ -4,7 +4,6 @@ use crate::directory::Directory;
 use crate::env::Update;
 use crate::error::{Error, Result};
 use crate::expand::{expand_globs, ExpandedTest};
-use crate::flock::Lock;
 use crate::manifest::{Bin, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
@@ -17,10 +16,11 @@ use std::fs::{self, File};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
+use tempfile::{tempdir, TempDir};
 
 #[derive(Debug)]
 pub(crate) struct Project {
-    pub dir: Directory,
+    pub dir: TempDir,
     source_dir: Directory,
     pub target_dir: Directory,
     pub name: String,
@@ -50,11 +50,10 @@ impl Runner {
         let mut tests = expand_globs(&self.tests);
         filter(&mut tests);
 
-        let (project, _lock) = (|| {
+        let project = (|| {
             let mut project = self.prepare(&tests)?;
-            let lock = Lock::acquire(path!(project.dir / ".lock"))?;
             self.write(&mut project)?;
-            Ok((project, lock))
+            Ok(project)
         })()
         .unwrap_or_else(|err| {
             message::prepare_fail(err);
@@ -147,8 +146,9 @@ impl Runner {
             .collect();
 
         let crate_name = &source_manifest.package.name;
-        let project_dir = path!(target_dir / "tests" / "trybuild" / crate_name /);
-        fs::create_dir_all(&project_dir)?;
+
+        let project_dir = tempdir()?;
+        println!("{}", project_dir.path().display());
 
         let project_name = format!("{}-tests", crate_name);
         let manifest = self.make_manifest(
