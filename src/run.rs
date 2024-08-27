@@ -148,8 +148,6 @@ impl Runner {
         let crate_name = &source_manifest.package.name;
 
         let project_dir = tempdir()?;
-        println!("{}", project_dir.path().display());
-
         let project_name = format!("{}-tests", crate_name);
         let manifest = self.make_manifest(
             &workspace,
