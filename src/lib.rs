@@ -223,6 +223,7 @@
     clippy::module_inception,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
+    clippy::needless_lifetimes,
     clippy::needless_pass_by_value,
     clippy::non_ascii_literal,
     clippy::range_plus_one,
