@@ -224,14 +224,23 @@ to catch. If the compiler changes something that makes error messages that we
 care about substantially worse, it is also important to catch and report as a
 compiler issue.
 
-## CI
+<br>
 
-Make sure `rust-src` component is installed on CI, otherwise error messages
-on CI will not include snippets of code from the standard library. This will
-make sure the output on CI is the same as on your local machine.
+## Troubleshooting
 
-```bash
-rustup component add rust-src
+The Rust compiler's diagnostic output can vary as a function of whether the
+`rust-src` Rustup component is installed. The compiler will render source
+snippets from the standard library if the standard library source is available
+locally, and will simply omit snippets if not. This can account for differences
+between CI and local development.
+
+If you have compile_fail tests pertaining to standard library traits or types,
+you can ensure a consistent environment by adding a rust-toolchain.toml file
+with the following content.
+
+```toml
+[toolchain]
+components = ["rust-src"]
 ```
 
 <br>
