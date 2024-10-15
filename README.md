@@ -224,6 +224,16 @@ to catch. If the compiler changes something that makes error messages that we
 care about substantially worse, it is also important to catch and report as a
 compiler issue.
 
+## CI
+
+Make sure `rust-src` component is installed on CI, otherwise error messages
+on CI will not include snippets of code from the standard library. This will
+make sure the output on CI is the same as on your local machine.
+
+```bash
+rustup component add rust-src
+```
+
 <br>
 
 #### License
