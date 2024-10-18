@@ -228,6 +228,7 @@
 //! ```
 
 #![doc(html_root_url = "https://docs.rs/trybuild/1.0.100")]
+#![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
 #![allow(
     clippy::collapsible_if,
     clippy::comparison_chain,
