@@ -183,12 +183,6 @@ fn features(project: &Project) -> Vec<String> {
 }
 
 fn target() -> Vec<&'static str> {
-    #[cfg(not(host_os = "windows"))]
-    const TARGET: &str = include!(concat!(env!("OUT_DIR"), "/target"));
-
-    #[cfg(host_os = "windows")]
-    const TARGET: &str = include!(concat!(env!("OUT_DIR"), "\\target"));
-
     // When --target flag is passed, cargo does not pass RUSTFLAGS to rustc when
     // building proc-macro and build script even if the host and target triples
     // are the same. Therefore, if we always pass --target to cargo, tools such
@@ -205,6 +199,6 @@ fn target() -> Vec<&'static str> {
     if cfg!(trybuild_no_target) {
         vec![]
     } else {
-        vec!["--target", TARGET]
+        vec!["--target", target_triple::TARGET]
     }
 }
