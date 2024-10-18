@@ -10,12 +10,9 @@ fn main() -> io::Result<()> {
     println!("cargo:rustc-check-cfg=cfg(host_os, values(\"windows\"))");
 
     let out_dir = env::var_os("OUT_DIR").unwrap();
-    let target = env::var("TARGET").ok();
+    let target = env::var("TARGET").unwrap();
     let path = Path::new(&out_dir).join("target");
-    let value = match target {
-        Some(target) => format!(r#"Some("{}")"#, target.escape_debug()),
-        None => "None".to_owned(),
-    };
+    let value = format!(r#""{}""#, target.escape_debug());
     fs::write(path, value)?;
 
     let host = env::var_os("HOST").unwrap();
