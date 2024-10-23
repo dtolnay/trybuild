@@ -1,0 +1,13 @@
+error[E0080]: evaluation of `main::{constant#0}` failed
+ --> tests/ui/compile-fail-const-assert.rs:2:13
+  |
+2 |     const { assert!(false) };
+  |             ^^^^^^^^^^^^^^ the evaluated program panicked at 'assertion failed: false', $DIR/tests/ui/compile-fail-const-assert.rs:2:13
+  |
+  = note: this error originates in the macro `assert` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+note: erroneous constant encountered
+ --> tests/ui/compile-fail-const-assert.rs:2:5
+  |
+2 |     const { assert!(false) };
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -80,7 +80,7 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
 
     let mut command = cargo(project);
     command
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.full_build { "build" } else { "check" })
         .args(target())
         .arg("--bin")
         .arg(&project.name)
@@ -114,7 +114,7 @@ pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .status();
 
     cargo(project)
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.full_build { "build" } else { "check" })
         .args(target())
         .arg("--bin")
         .arg(name)
@@ -137,7 +137,7 @@ pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
         .status();
 
     cargo(project)
-        .arg(if project.has_pass { "build" } else { "check" })
+        .arg(if project.full_build { "build" } else { "check" })
         .args(target())
         .arg("--bins")
         .args(features(project))

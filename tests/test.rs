@@ -20,3 +20,10 @@ fn test() {
     t.compile_fail("tests/ui/compile-fail-2.rs");
     t.compile_fail("tests/ui/compile-fail-3.rs");
 }
+
+#[test]
+fn test_full_build() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("tests/ui/compile-fail-const-assert.rs");
+    t.full_build(true);
+}

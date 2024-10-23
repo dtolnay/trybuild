@@ -294,6 +294,7 @@ pub struct TestCases {
 #[derive(Debug)]
 struct Runner {
     tests: Vec<Test>,
+    full_build: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -312,10 +313,18 @@ impl TestCases {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         TestCases {
-            runner: RefCell::new(Runner { tests: Vec::new() }),
+            runner: RefCell::new(Runner {
+                tests: Vec::new(),
+                full_build: false,
+            }),
         }
     }
 
+    /// Add one or more source files containing pass tests.
+    ///
+    /// You can use a [`glob`][glob::glob] patterns add multiple source files at once.
+    ///
+    /// Each source file must have a `main` function, and the test is considered to suceed if the `main` function does not panic.
     pub fn pass<P: AsRef<Path>>(&self, path: P) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
@@ -323,11 +332,24 @@ impl TestCases {
         });
     }
 
+    /// Add one or more source files containing compile-fail tests.
+    ///
+    /// You can use a [`glob`][glob::glob] patterns add multiple source files at once.
     pub fn compile_fail<P: AsRef<Path>>(&self, path: P) {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
         });
+    }
+
+    /// Enable or disable full builds of the test cases.
+    ///
+    /// To save time, `trybuild` runs `cargo check` instead of `cargo build` if there are no [`pass()`][Self::pass] tests.
+    /// However, some build failures (like assertions in const context) do not currently show up with `cargo check`.
+    ///
+    /// You can force `trybuild` to run a full build as a work-around.
+    pub fn full_build(&self, full: bool) {
+        self.runner.borrow_mut().full_build = full;
     }
 }
 
