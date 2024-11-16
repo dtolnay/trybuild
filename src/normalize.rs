@@ -286,7 +286,7 @@ impl<'a> Filter<'a> {
                 } else if line[indent + 4..].starts_with("/rustc/")
                     && line
                         .get(indent + 11..indent + 51)
-                        .map_or(false, is_ascii_lowercase_hex)
+                        .is_some_and(is_ascii_lowercase_hex)
                     && line[indent + 51..].starts_with("/library/")
                 {
                     // --> /rustc/c5c7d2b37780dac1092e75f12ab97dd56c30861e/library/std/src/net/ip.rs:83:1
@@ -304,7 +304,7 @@ impl<'a> Filter<'a> {
                     let hash_end = hash_start + 16;
                     if line
                         .get(hash_start..hash_end)
-                        .map_or(false, is_ascii_lowercase_hex)
+                        .is_some_and(is_ascii_lowercase_hex)
                         && line[hash_end..].starts_with('/')
                     {
                         // --> /home/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
