@@ -20,13 +20,7 @@ mod r#impl {
 
     impl<'a> Diff<'a> {
         pub fn compute(expected: &'a str, actual: &'a str) -> Option<Self> {
-            if expected.len() + actual.len() > 2048 {
-                // We don't yet trust the dissimilar crate to work well on large
-                // inputs.
-                return None;
-            }
-
-            // Nor on non-ascii inputs.
+            // We don't yet trust the dissimilar crate to work well on on non-ascii inputs.
             let diff = panic::catch_unwind(|| dissimilar::diff(expected, actual)).ok()?;
 
             let mut common_len = 0;
