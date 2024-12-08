@@ -16,7 +16,7 @@ rust-version = "1.70"
 # Experimental: highlight the diff between the expected and actual compiler
 # output. Currently unix-only. If you test this out, please provide any feedback
 # in https://github.com/dtolnay/trybuild/issues/41.
-diff = ["dissimilar"]
+diff = ["dep:dissimilar"]
 
 [dependencies]
 dissimilar = { version = "1.0", optional = true }
