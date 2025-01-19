@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 macro_rules! path {
     ($($tt:tt)+) => {
         tokenize_path!([] [] $($tt)+)
@@ -31,10 +33,21 @@ macro_rules! tokenize_path {
     }};
 }
 
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone)]
+pub(crate) struct CanonicalPath(PathBuf);
+
+impl CanonicalPath {
+    pub(crate) fn new(path: &Path) -> Self {
+        if let Ok(canonical) = path.canonicalize() {
+            CanonicalPath(canonical)
+        } else {
+            CanonicalPath(path.to_owned())
+        }
+    }
+}
+
 #[test]
 fn test_path_macro() {
-    use std::path::{Path, PathBuf};
-
     struct Project {
         dir: PathBuf,
     }

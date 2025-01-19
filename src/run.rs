@@ -8,6 +8,7 @@ use crate::flock::Lock;
 use crate::manifest::{Bin, Manifest, Name, Package, Workspace};
 use crate::message::{self, Fail, Warn};
 use crate::normalize::{self, Context, Variations};
+use crate::path::CanonicalPath;
 use crate::{features, Expected, Runner, Test};
 use serde_derive::Deserialize;
 use std::collections::{BTreeMap as Map, BTreeSet as Set};
@@ -325,7 +326,7 @@ impl Runner {
 
         let mut path_map = Map::new();
         for t in &tests {
-            let src_path = project.source_dir.join(&t.test.path);
+            let src_path = CanonicalPath::new(&project.source_dir.join(&t.test.path));
             path_map.insert(src_path, (&t.name, &t.test));
         }
 
@@ -342,7 +343,7 @@ impl Runner {
             }
 
             if t.error.is_none() {
-                let src_path = project.source_dir.join(&t.test.path);
+                let src_path = CanonicalPath::new(&project.source_dir.join(&t.test.path));
                 let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
                 match t.test.check(project, &t.name, this_test, "") {
                     Ok(Outcome::Passed) => {}
@@ -373,7 +374,7 @@ impl Test {
         check_exists(&self.path)?;
 
         let mut path_map = Map::new();
-        let src_path = project.source_dir.join(&self.path);
+        let src_path = CanonicalPath::new(&project.source_dir.join(&self.path));
         path_map.insert(src_path.clone(), (name, self));
 
         let output = cargo::build_test(project, name)?;
@@ -580,7 +581,7 @@ struct RustcMessage {
 
 struct ParsedOutputs {
     stdout: String,
-    stderrs: Map<PathBuf, Stderr>,
+    stderrs: Map<CanonicalPath, Stderr>,
 }
 
 struct Stderr {
@@ -600,7 +601,7 @@ impl Default for Stderr {
 fn parse_cargo_json(
     project: &Project,
     stdout: &[u8],
-    path_map: &Map<PathBuf, (&Name, &Test)>,
+    path_map: &Map<CanonicalPath, (&Name, &Test)>,
 ) -> ParsedOutputs {
     let mut map = Map::new();
     let mut nonmessage_stdout = String::new();
@@ -627,12 +628,11 @@ fn parse_cargo_json(
         }
         if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
             if de.message.level != "failure-note" {
-                let Some((name, test)) = path_map.get(&de.target.src_path) else {
+                let src_path = CanonicalPath::new(&de.target.src_path);
+                let Some((name, test)) = path_map.get(&src_path) else {
                     continue;
                 };
-                let entry = map
-                    .entry(de.target.src_path)
-                    .or_insert_with(Stderr::default);
+                let entry = map.entry(src_path).or_insert_with(Stderr::default);
                 if de.message.level == "error" {
                     entry.success = false;
                 }
