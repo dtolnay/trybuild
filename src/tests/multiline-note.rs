@@ -29,14 +29,14 @@ error[E0038]: the trait `MyTrait` is not dyn compatible
   |
 note: for a trait to be dyn compatible it needs to allow building a vtable
       for more information, visit <https://doc.rust-lang.org/reference/items/traits.html#object-safety>
-   --> $RUST/core/src/hash/mod.rs
-    |
-    |     fn hash<H: Hasher>(&self, state: &mut H);
-    |        ^^^^ ...because method `hash` has generic type parameters
-    |
-   ::: src/main.rs:3:7
-    |
-3   | trait MyTrait: Hash {
-    |       ------- this trait is not dyn compatible...
-    = help: consider moving `hash` to another trait
+ --> $RUST/core/src/hash/mod.rs
+  |
+  |     fn hash<H: Hasher>(&self, state: &mut H);
+  |        ^^^^ ...because method `hash` has generic type parameters
+  |
+ ::: src/main.rs:3:7
+  |
+3 | trait MyTrait: Hash {
+  |       ------- this trait is not dyn compatible...
+  = help: consider moving `hash` to another trait
 "}

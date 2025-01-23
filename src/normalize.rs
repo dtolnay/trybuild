@@ -6,6 +6,7 @@ use self::Normalization::*;
 use crate::directory::Directory;
 use crate::run::PathDependency;
 use std::cmp;
+use std::mem;
 use std::path::Path;
 
 #[derive(Copy, Clone)]
@@ -59,6 +60,7 @@ normalizations! {
     StripLongTypeNameFiles,
     UnindentAfterHelp,
     AndOthersVerbose,
+    UnindentMultilineNote,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -542,7 +544,7 @@ fn unindent(diag: String, normalization: Normalization) -> String {
         normalized.push_str(line);
         normalized.push('\n');
 
-        if indented_line_kind(line, normalization) != IndentedLineKind::Heading {
+        if indented_line_kind(line, &mut false, normalization) != IndentedLineKind::Heading {
             continue;
         }
 
@@ -551,12 +553,15 @@ fn unindent(diag: String, normalization: Normalization) -> String {
             continue;
         };
 
-        if let IndentedLineKind::Code(indent) = indented_line_kind(next_line, normalization) {
+        if let IndentedLineKind::Code(indent) =
+            indented_line_kind(next_line, &mut false, normalization)
+        {
             if next_line[indent + 1..].starts_with("--> ") {
                 let mut lines_in_block = 1;
                 let mut least_indent = indent;
+                let mut previous_line_is_note = false;
                 while let Some(line) = ahead.next() {
-                    match indented_line_kind(line, normalization) {
+                    match indented_line_kind(line, &mut previous_line_is_note, normalization) {
                         IndentedLineKind::Heading => break,
                         IndentedLineKind::Code(indent) => {
                             lines_in_block += 1;
@@ -572,10 +577,11 @@ fn unindent(diag: String, normalization: Normalization) -> String {
                         }
                     }
                 }
+                previous_line_is_note = false;
                 for _ in 0..lines_in_block {
                     let line = lines.next().unwrap();
                     if let IndentedLineKind::Code(_) | IndentedLineKind::Other(_) =
-                        indented_line_kind(line, normalization)
+                        indented_line_kind(line, &mut previous_line_is_note, normalization)
                     {
                         let space = line.find(' ').unwrap();
                         normalized.push_str(&line[..space]);
@@ -592,7 +598,13 @@ fn unindent(diag: String, normalization: Normalization) -> String {
     normalized
 }
 
-fn indented_line_kind(line: &str, normalization: Normalization) -> IndentedLineKind {
+fn indented_line_kind(
+    line: &str,
+    previous_line_is_note: &mut bool,
+    normalization: Normalization,
+) -> IndentedLineKind {
+    let previous_line_was_note = mem::replace(previous_line_is_note, false);
+
     if let Some(heading_len) = if line.starts_with("error") {
         Some("error".len())
     } else if line.starts_with("warning") {
@@ -608,7 +620,11 @@ fn indented_line_kind(line: &str, normalization: Normalization) -> IndentedLineK
     if line.starts_with("note:")
         || line == "..."
         || normalization >= UnindentAfterHelp && line.starts_with("help:")
+        || normalization >= UnindentMultilineNote
+            && previous_line_was_note
+            && line.starts_with("      ")
     {
+        *previous_line_is_note = true;
         return IndentedLineKind::Note;
     }
 
