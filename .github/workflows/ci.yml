@@ -61,6 +61,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       - name: Enable type layout randomization
         run: echo RUSTFLAGS=${RUSTFLAGS}\ -Zrandomize-layout >> $GITHUB_ENV
+        shell: bash
       - run: cargo test
 
   minimal:
