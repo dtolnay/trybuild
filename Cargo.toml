@@ -31,9 +31,6 @@ toml = "0.8"
 [dev-dependencies]
 automod = "1.0.10"
 
-[lib]
-doc-scrape-examples = false
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
