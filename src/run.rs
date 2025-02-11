@@ -1,7 +1,7 @@
 use crate::cargo::{self, Metadata, PackageMetadata};
 use crate::dependencies::{self, Dependency, EditionOrInherit};
 use crate::directory::Directory;
-use crate::env::Update;
+use crate::env::{Update, use_offline_mode};
 use crate::error::{Error, Result};
 use crate::expand::{expand_globs, ExpandedTest};
 use crate::flock::Lock;
@@ -33,6 +33,7 @@ pub(crate) struct Project {
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
     pub keep_going: bool,
+    pub offline: bool,
 }
 
 #[derive(Debug)]
@@ -165,6 +166,11 @@ impl Runner {
             enabled_features.retain(|feature| manifest.features.contains_key(feature));
         }
 
+        // By default, the project will run in offline mode (i.e., the
+        // `--offline` cargo option will be used). Check an environment variable
+        // to determine if offline mode should *not* be used.
+        let enable_offline_mode: bool = use_offline_mode();
+
         Ok(Project {
             dir: project_dir,
             source_dir,
@@ -178,6 +184,7 @@ impl Runner {
             path_dependencies,
             manifest,
             keep_going: false,
+            offline: enable_offline_mode,
         })
     }
 

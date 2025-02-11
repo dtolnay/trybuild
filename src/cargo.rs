@@ -41,7 +41,9 @@ fn cargo(project: &Project) -> Command {
     cmd.envs(cargo_target_dir(project));
     cmd.env_remove("RUSTFLAGS");
     cmd.env("CARGO_INCREMENTAL", "0");
-    cmd.arg("--offline");
+    if project.offline {
+        cmd.arg("--offline");
+    }
 
     let rustflags = rustflags::toml();
     cmd.arg(format!("--config=build.rustflags={rustflags}"));
