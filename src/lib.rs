@@ -235,6 +235,7 @@
     clippy::default_trait_access,
     clippy::derive_partial_eq_without_eq,
     clippy::doc_markdown,
+    clippy::elidable_lifetime_names,
     clippy::enum_glob_use,
     clippy::iter_not_returning_iterator, // https://github.com/rust-lang/rust-clippy/issues/8285
     clippy::let_underscore_untyped, // https://github.com/rust-lang/rust-clippy/issues/10410
