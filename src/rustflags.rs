@@ -1,3 +1,5 @@
+use std::env;
+
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
 pub(crate) fn toml() -> toml::Value {
@@ -8,10 +10,10 @@ pub(crate) fn toml() -> toml::Value {
         rustflags.push(lint);
     }
 
-    if let Ok(flags) = std::env::var("RUSTFLAGS") {
+    if let Some(flags) = env::var_os("RUSTFLAGS") {
         // TODO: could parse this properly and allowlist or blocklist certain
         // flags. This is good enough to at least support cargo-llvm-cov.
-        if flags.contains("-C instrument-coverage") {
+        if flags.to_string_lossy().contains("-C instrument-coverage") {
             rustflags.extend(["-C", "instrument-coverage"]);
         }
     }
