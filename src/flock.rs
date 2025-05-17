@@ -49,9 +49,8 @@ impl Guard {
 impl FileLock {
     fn acquire(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_owned();
-        let lockfile = match create(&path) {
-            None => return Ok(FileLock::NotLocked),
-            Some(lockfile) => lockfile,
+        let Some(lockfile) = create(&path) else {
+            return Ok(FileLock::NotLocked);
         };
         let done = Arc::new(AtomicBool::new(false));
         let thread = thread::Builder::new().name("trybuild-flock".to_owned());
