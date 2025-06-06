@@ -1,4 +1,5 @@
 #![no_main]
+#![allow(unknown_lints, mismatched_lifetime_syntaxes)]
 
 #[path = "../../src/directory.rs"]
 #[allow(dead_code)]

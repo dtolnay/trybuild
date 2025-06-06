@@ -259,6 +259,7 @@
     clippy::while_let_on_iterator,
 )]
 #![deny(clippy::clone_on_ref_ptr)]
+#![allow(unknown_lints, mismatched_lifetime_syntaxes)]
 
 #[macro_use]
 mod term;
