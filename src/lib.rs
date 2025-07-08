@@ -227,7 +227,7 @@
 //! components = ["rust-src"]
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/trybuild/1.0.105")]
+#![doc(html_root_url = "https://docs.rs/trybuild/1.0.106")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
 #![allow(
     clippy::collapsible_if,
