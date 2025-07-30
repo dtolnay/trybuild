@@ -634,8 +634,12 @@ fn indented_line_kind(
         return IndentedLineKind::Code(spaces);
     }
 
-    let digits = line.bytes().take_while(u8::is_ascii_digit).count();
-    let spaces = line[digits..].bytes().take_while(|b| *b == b' ').count();
+    let mut spaces = line.bytes().take_while(is_space).count();
+    let digits = line[spaces..]
+        .bytes()
+        .take_while(u8::is_ascii_digit)
+        .count();
+    spaces += line[spaces + digits..].bytes().take_while(is_space).count();
     let rest = &line[digits + spaces..];
     if spaces > 0
         && (rest == "|"
