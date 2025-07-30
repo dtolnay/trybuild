@@ -73,7 +73,17 @@ pub(crate) fn manifest_dir() -> Result<Directory> {
 pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
     let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
     if workspace_cargo_lock.exists() {
-        let _ = fs::copy(workspace_cargo_lock, path!(project.dir / "Cargo.lock"));
+        let dest_lockfile = path!(project.dir / "Cargo.lock");
+        let _ = fs::copy(workspace_cargo_lock, &dest_lockfile);
+
+        // Ensure the destination file is writable in case the source was read-only
+        if let Ok(metadata) = fs::metadata(&dest_lockfile) {
+            let mut permissions = metadata.permissions();
+            if permissions.readonly() {
+                permissions.set_readonly(false);
+                let _ = fs::set_permissions(&dest_lockfile, permissions);
+            }
+        }
     } else {
         let _ = cargo(project).arg("generate-lockfile").status();
     }
