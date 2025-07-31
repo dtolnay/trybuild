@@ -72,17 +72,20 @@ pub(crate) fn manifest_dir() -> Result<Directory> {
 }
 
 pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
+    // Try copying or generating lockfile.
     match File::open(path!(project.workspace / "Cargo.lock")) {
         Ok(mut workspace_cargo_lock) => {
-            let mut new_cargo_lock = File::create(path!(project.dir / "Cargo.lock"))?;
-            // Not fs::copy in order to avoid producing a read-only destination
-            // file if the source file happens to be read-only.
-            io::copy(&mut workspace_cargo_lock, &mut new_cargo_lock)?;
+            if let Ok(mut new_cargo_lock) = File::create(path!(project.dir / "Cargo.lock")) {
+                // Not fs::copy in order to avoid producing a read-only destination
+                // file if the source file happens to be read-only.
+                let _ = io::copy(&mut workspace_cargo_lock, &mut new_cargo_lock);
+            }
         }
-        Err(err) if err.kind() == io::ErrorKind::NotFound => {
-            let _ = cargo(project).arg("generate-lockfile").status();
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                let _ = cargo(project).arg("generate-lockfile").status();
+            }
         }
-        Err(err) => return Err(Error::Io(err)),
     }
 
     let mut command = cargo(project);
