@@ -4,9 +4,10 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde_derive::Deserialize;
+use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, fs, iter};
+use std::{env, io, iter};
 use target_triple::TARGET;
 
 #[derive(Deserialize)]
@@ -71,21 +72,20 @@ pub(crate) fn manifest_dir() -> Result<Directory> {
 }
 
 pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
-    let workspace_cargo_lock = path!(project.workspace / "Cargo.lock");
-    if workspace_cargo_lock.exists() {
-        let dest_lockfile = path!(project.dir / "Cargo.lock");
-        let _ = fs::copy(workspace_cargo_lock, &dest_lockfile);
-
-        // Ensure the destination file is writable in case the source was read-only
-        if let Ok(metadata) = fs::metadata(&dest_lockfile) {
-            let mut permissions = metadata.permissions();
-            if permissions.readonly() {
-                permissions.set_readonly(false);
-                let _ = fs::set_permissions(&dest_lockfile, permissions);
+    // Try copying or generating lockfile.
+    match File::open(path!(project.workspace / "Cargo.lock")) {
+        Ok(mut workspace_cargo_lock) => {
+            if let Ok(mut new_cargo_lock) = File::create(path!(project.dir / "Cargo.lock")) {
+                // Not fs::copy in order to avoid producing a read-only destination
+                // file if the source file happens to be read-only.
+                let _ = io::copy(&mut workspace_cargo_lock, &mut new_cargo_lock);
             }
         }
-    } else {
-        let _ = cargo(project).arg("generate-lockfile").status();
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                let _ = cargo(project).arg("generate-lockfile").status();
+            }
+        }
     }
 
     let mut command = cargo(project);
