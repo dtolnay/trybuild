@@ -26,6 +26,7 @@ pub(crate) fn expand_globs(tests: &[Test]) -> Vec<ExpandedTest> {
                                 path,
                                 expected,
                                 envs: test.envs.clone(),
+                                features: test.features.clone(),
                             },
                             None,
                             true,

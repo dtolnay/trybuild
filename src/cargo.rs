@@ -114,10 +114,31 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
     Ok(())
 }
 
+// Constructs the command arguments for an extended set of features
+//
+// This is for adding features that are not in the project file, but with which the user wants to try a build.
+// It could be rolled into the normal features function, but I've kept it separate for now for clarity.
+fn extend_features(extended_features: &[OsString]) -> Vec<String> {
+    if extended_features.is_empty() {
+        vec![]
+    } else {
+        // --features and convert from OsString to String
+        vec!["--features".to_owned()]
+            .into_iter()
+            .chain(
+                extended_features
+                    .iter()
+                    .map(|f| f.to_string_lossy().to_string()),
+            )
+            .collect()
+    }
+}
+
 pub(crate) fn build_test(
     project: &Project,
     name: &Name,
     envs: &[(OsString, OsString)],
+    extended_features: &[OsString],
 ) -> Result<Output> {
     let _ = cargo(project)
         .arg("clean")
@@ -134,6 +155,7 @@ pub(crate) fn build_test(
         .arg("--bin")
         .arg(name)
         .args(features(project))
+        .args(extend_features(extended_features)) // this creates a second --features flag which cargo currently supports
         .arg("--quiet")
         .arg("--color=never")
         .arg("--message-format=json")
