@@ -284,6 +284,7 @@ mod run;
 mod rustflags;
 
 use std::cell::RefCell;
+use std::ffi::OsString;
 use std::panic::RefUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -302,6 +303,7 @@ struct Runner {
 struct Test {
     path: PathBuf,
     expected: Expected,
+    envs: Vec<(OsString, OsString)>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -322,6 +324,22 @@ impl TestCases {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::Pass,
+            envs: Vec::new(),
+        });
+    }
+
+    pub fn pass_with_envs<P: AsRef<Path>>(
+        &self,
+        path: P,
+        envs: impl IntoIterator<Item = (impl Into<OsString>, impl Into<OsString>)>,
+    ) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::Pass,
+            envs: envs
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
         });
     }
 
@@ -329,6 +347,22 @@ impl TestCases {
         self.runner.borrow_mut().tests.push(Test {
             path: path.as_ref().to_owned(),
             expected: Expected::CompileFail,
+            envs: Vec::new(),
+        });
+    }
+
+    pub fn compile_fail_with_envs<P: AsRef<Path>>(
+        &self,
+        path: P,
+        envs: impl IntoIterator<Item = (impl Into<OsString>, impl Into<OsString>)>,
+    ) {
+        self.runner.borrow_mut().tests.push(Test {
+            path: path.as_ref().to_owned(),
+            expected: Expected::CompileFail,
+            envs: envs
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
         });
     }
 }

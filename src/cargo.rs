@@ -4,6 +4,7 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde_derive::Deserialize;
+use std::ffi::OsString;
 use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
@@ -113,7 +114,11 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
+pub(crate) fn build_test(
+    project: &Project,
+    name: &Name,
+    envs: &[(OsString, OsString)],
+) -> Result<Output> {
     let _ = cargo(project)
         .arg("clean")
         .arg("--package")
@@ -132,6 +137,7 @@ pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .arg("--quiet")
         .arg("--color=never")
         .arg("--message-format=json")
+        .envs(envs.iter().map(|(k, v)| (k.as_os_str(), v.as_os_str())))
         .output()
         .map_err(Error::Cargo)
 }

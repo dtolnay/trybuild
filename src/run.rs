@@ -377,7 +377,7 @@ impl Test {
         let src_path = CanonicalPath::new(&project.source_dir.join(&self.path));
         path_map.insert(src_path.clone(), (name, self));
 
-        let output = cargo::build_test(project, name)?;
+        let output = cargo::build_test(project, name, &self.envs)?;
         let parsed = parse_cargo_json(project, &output.stdout, &path_map);
         let fallback = Stderr::default();
         let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
