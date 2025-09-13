@@ -28,7 +28,7 @@ error[E0308]: mismatched types
   | |_____- arguments to this function are incorrect
   |
 note: function defined here
- --> $CARGO/tokio-1.26.0/src/time/interval.rs
+ --> $CARGO/tokio-$VERSION/src/time/interval.rs
   |
   | pub fn interval(period: Duration) -> Interval {
   |        ^^^^^^^^

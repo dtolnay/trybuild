@@ -61,6 +61,7 @@ normalizations! {
     UnindentAfterHelp,
     AndOthersVerbose,
     UnindentMultilineNote,
+    DependencyVersion,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -313,6 +314,20 @@ impl<'a> Filter<'a> {
                         // --> $CARGO/serde_json-1.0.64/src/de.rs:2584:8
                         line.replace_range(indent + 4..hash_end, "$CARGO");
                         other_crate = true;
+                        if self.normalization >= DependencyVersion {
+                            let rest = &line[indent + 11..];
+                            let end_of_version = rest.find('/');
+                            if let Some(end_of_crate_name) = end_of_version
+                                .and_then(|end| rest[..end].find('.'))
+                                .and_then(|end| rest[..end].rfind('-'))
+                            {
+                                line.replace_range(
+                                    indent + end_of_crate_name + 12
+                                        ..indent + end_of_version.unwrap() + 11,
+                                    "$VERSION",
+                                );
+                            }
+                        }
                     }
                 }
             }
