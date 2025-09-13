@@ -28,7 +28,7 @@ error[E0277]: the trait bound `__T: serde::ser::Serialize` is not satisfied
   |
   = note: required for `__T` to implement `erased_serde::Serialize`
 note: required by a bound in `require_erased_serialize_impl`
- --> $CARGO/erased-serde-0.3.28/src/private.rs
+ --> $CARGO/erased-serde-$VERSION/src/private.rs
   |
   | pub fn require_erased_serialize_impl<T>()
   |        ----------------------------- required by a bound in this function
