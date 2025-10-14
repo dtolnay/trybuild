@@ -34,22 +34,22 @@ error[E0080]: evaluation panicked: assertion failed: N == mem::size_of::<T::Type
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `<(monostate::alphabet::len<8>, (monostate::alphabet::char<'a'>, monostate::alphabet::char<'s'>, monostate::alphabet::char<'d'>, monostate::alphabet::char<'f'>)) as monostate::string::Sealed>::__private::{constant#0}` failed here
 
 note: erroneous constant encountered
-  --> $WORKSPACE/src/string.rs
-   |
-   | /         const {
-   | |             assert!(N == mem::size_of::<T::Type>());
-   | |         }
-   | |_________^
+ --> $WORKSPACE/src/string.rs
+  |
+  | /         const {
+  | |             assert!(N == mem::size_of::<T::Type>());
+  | |         }
+  | |_________^
 
 note: erroneous constant encountered
-  --> $WORKSPACE/src/string.rs
-   |
-   |     const VALUE: &'static str = T::__private.0;
-   |                                 ^^^^^^^^^^^^
+ --> $WORKSPACE/src/string.rs
+  |
+  |     const VALUE: &'static str = T::__private.0;
+  |                                 ^^^^^^^^^^^^
 
 note: erroneous constant encountered
-   --> $WORKSPACE/src/value.rs
-    |
-    |     pub const VALUE: &'static str = V::VALUE;
-    |                                     ^^^^^^^^
+ --> $WORKSPACE/src/value.rs
+  |
+  |     pub const VALUE: &'static str = V::VALUE;
+  |                                     ^^^^^^^^
 "}

@@ -62,6 +62,7 @@ normalizations! {
     AndOthersVerbose,
     UnindentMultilineNote,
     DependencyVersion,
+    HeadingNote,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -562,7 +563,7 @@ fn unindent(diag: String, normalization: Normalization) -> String {
         normalized.push_str(line);
         normalized.push('\n');
 
-        if indented_line_kind(line, &mut false, normalization) != IndentedLineKind::Heading {
+        if indented_line_kind(line, true, &mut false, normalization) != IndentedLineKind::Heading {
             continue;
         }
 
@@ -572,14 +573,15 @@ fn unindent(diag: String, normalization: Normalization) -> String {
         };
 
         if let IndentedLineKind::Code(indent) =
-            indented_line_kind(next_line, &mut false, normalization)
+            indented_line_kind(next_line, false, &mut false, normalization)
         {
             if next_line[indent + 1..].starts_with("--> ") {
                 let mut lines_in_block = 1;
                 let mut least_indent = indent;
                 let mut previous_line_is_note = false;
                 while let Some(line) = ahead.next() {
-                    match indented_line_kind(line, &mut previous_line_is_note, normalization) {
+                    match indented_line_kind(line, false, &mut previous_line_is_note, normalization)
+                    {
                         IndentedLineKind::Heading => break,
                         IndentedLineKind::Code(indent) => {
                             lines_in_block += 1;
@@ -599,7 +601,7 @@ fn unindent(diag: String, normalization: Normalization) -> String {
                 for _ in 0..lines_in_block {
                     let line = lines.next().unwrap();
                     if let IndentedLineKind::Code(_) | IndentedLineKind::Other(_) =
-                        indented_line_kind(line, &mut previous_line_is_note, normalization)
+                        indented_line_kind(line, false, &mut previous_line_is_note, normalization)
                     {
                         let space = line.find(' ').unwrap();
                         normalized.push_str(&line[..space]);
@@ -618,6 +620,7 @@ fn unindent(diag: String, normalization: Normalization) -> String {
 
 fn indented_line_kind(
     line: &str,
+    first_line_in_block: bool,
     previous_line_is_note: &mut bool,
     normalization: Normalization,
 ) -> IndentedLineKind {
@@ -633,6 +636,10 @@ fn indented_line_kind(
         if line[heading_len..].starts_with(&[':', '['][..]) {
             return IndentedLineKind::Heading;
         }
+    }
+
+    if first_line_in_block && normalization >= HeadingNote && line.starts_with("note: ") {
+        return IndentedLineKind::Heading;
     }
 
     if line.starts_with("note:")
