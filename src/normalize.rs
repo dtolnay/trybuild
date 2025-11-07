@@ -63,6 +63,7 @@ normalizations! {
     UnindentMultilineNote,
     DependencyVersion,
     HeadingNote,
+    UnindentSuggestion,
     // New normalization steps are to be inserted here at the end so that any
     // snapshots saved before your normalization change remain passing.
 }
@@ -669,6 +670,14 @@ fn indented_line_kind(
     if spaces > 0
         && (rest == "|"
             || rest.starts_with("| ")
+            || normalization >= UnindentSuggestion
+                && digits > 0
+                && (rest == "~"
+                    || rest.starts_with("~ ")
+                    || rest == "+"
+                    || rest.starts_with("+ ")
+                    || rest == "-"
+                    || rest.starts_with("- "))
             || digits == 0
                 && (rest.starts_with("--> ") || rest.starts_with("::: ") || rest.starts_with("= ")))
     {
