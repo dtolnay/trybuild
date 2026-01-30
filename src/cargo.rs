@@ -37,6 +37,10 @@ fn raw_cargo() -> Command {
 }
 
 fn cargo(project: &Project) -> Command {
+    cargo_with_rustflags(project, &[])
+}
+
+fn cargo_with_rustflags(project: &Project, extra_rustflags: &[&'static str]) -> Command {
     let mut cmd = raw_cargo();
     cmd.current_dir(&project.dir);
     cmd.envs(cargo_target_dir(project));
@@ -44,7 +48,7 @@ fn cargo(project: &Project) -> Command {
     cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
 
-    let rustflags = rustflags::toml();
+    let rustflags = rustflags::toml(extra_rustflags);
     cmd.arg(format!("--config=build.rustflags={rustflags}"));
     cmd.arg(format!("--config=target.{TARGET}.rustflags={rustflags}"));
 
@@ -122,7 +126,7 @@ pub(crate) fn build_test(project: &Project, name: &Name) -> Result<Output> {
         .stderr(Stdio::null())
         .status();
 
-    cargo(project)
+    cargo_with_rustflags(project, &["--diagnostic-width=140"])
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())
         .arg("--bin")
@@ -145,7 +149,7 @@ pub(crate) fn build_all_tests(project: &Project) -> Result<Output> {
         .stderr(Stdio::null())
         .status();
 
-    cargo(project)
+    cargo_with_rustflags(project, &["--diagnostic-width=140"])
         .arg(if project.has_pass { "build" } else { "check" })
         .args(target())
         .arg("--bins")
