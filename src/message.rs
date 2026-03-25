@@ -120,7 +120,7 @@ pub(crate) fn mismatch(expected: &str, actual: &str) {
     println!("mismatch");
     term::reset();
     println!();
-    let diff = if env::var_os("TERM").map_or(true, |term| term == "dumb") {
+    let diff = if env::var_os("TERM").is_none_or(|term| term == "dumb") {
         // No diff in dumb terminal or when TERM is unset.
         None
     } else {
