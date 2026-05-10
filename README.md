@@ -226,6 +226,27 @@ compiler issue.
 
 <br>
 
+## Sharing the build cache
+
+By default trybuild compiles each test case under a separate
+`target/tests/trybuild` directory and injects `--cfg trybuild` into the
+rustflags. Both keep trybuild's compilation fully isolated from whatever the
+surrounding workspace is doing.
+
+If your crate doesn't reference `cfg(trybuild)` anywhere, you can opt into
+sharing the parent workspace's incremental build cache by setting the
+environment variable `TRYBUILD_NO_CFG`. With that variable set, trybuild omits
+the `--cfg trybuild` rustflag and stops overriding `CARGO_TARGET_DIR`, so the
+spawned cargo invocation inherits the parent's target directory and can reuse
+already-compiled dependency artifacts. For projects with heavy dependency
+trees this can make trybuild's cold-cache time substantially shorter.
+
+Don't set this variable if your crate or any of its dependencies reference
+`cfg(trybuild)` — those branches would otherwise be compiled as if trybuild
+were absent.
+
+<br>
+
 ## Troubleshooting
 
 The Rust compiler's diagnostic output can vary as a function of whether the

@@ -7,7 +7,7 @@ use serde_derive::Deserialize;
 use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, io, iter};
+use std::{env, io};
 use target_triple::TARGET;
 
 #[derive(Deserialize)]
@@ -55,11 +55,15 @@ fn cargo_with_rustflags(project: &Project, extra_rustflags: &[&'static str]) -> 
     cmd
 }
 
-fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, PathBuf)> {
-    iter::once((
-        "CARGO_TARGET_DIR",
-        path!(project.target_dir / "tests" / "trybuild"),
-    ))
+fn cargo_target_dir(project: &Project) -> Vec<(&'static str, PathBuf)> {
+    if env::var_os("TRYBUILD_NO_CFG").is_some() {
+        Vec::new()
+    } else {
+        vec![(
+            "CARGO_TARGET_DIR",
+            path!(project.target_dir / "tests" / "trybuild"),
+        )]
+    }
 }
 
 pub(crate) fn manifest_dir() -> Result<Directory> {
