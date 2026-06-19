@@ -53,7 +53,7 @@ impl Display for Error {
             TomlSer(e) => write!(f, "{}", e),
             UpdateVar(var) => write!(
                 f,
-                "unrecognized value of TRYBUILD: {:?}",
+                r#"unrecognized value of TRYBUILD: {:?} is not one of "wip", "overwrite""#,
                 var.to_string_lossy(),
             ),
             WriteStderr(e) => write!(f, "failed to write stderr file: {}", e),
