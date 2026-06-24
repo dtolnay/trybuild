@@ -301,34 +301,22 @@ impl<'a> Filter<'a> {
                 }
             }
             if self.normalization >= CargoRegistry && !other_crate {
-                if let Some(pos) = line
-                    .find("/registry/src/github.com-")
-                    .or_else(|| line.find("/registry/src/index.crates.io-"))
-                {
-                    let hash_start = pos + line[pos..].find('-').unwrap() + 1;
-                    let hash_end = hash_start + 16;
-                    if line
-                        .get(hash_start..hash_end)
-                        .is_some_and(is_ascii_lowercase_hex)
-                        && line[hash_end..].starts_with('/')
-                    {
-                        // --> /home/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
-                        // --> $CARGO/serde_json-1.0.64/src/de.rs:2584:8
-                        line.replace_range(indent + 4..hash_end, "$CARGO");
-                        other_crate = true;
-                        if self.normalization >= DependencyVersion {
-                            let rest = &line[indent + 11..];
-                            let end_of_version = rest.find('/');
-                            if let Some(end_of_crate_name) = end_of_version
-                                .and_then(|end| rest[..end].find('.'))
-                                .and_then(|end| rest[..end].rfind('-'))
-                            {
-                                line.replace_range(
-                                    indent + end_of_crate_name + 12
-                                        ..indent + end_of_version.unwrap() + 11,
-                                    "$VERSION",
-                                );
-                            }
+                // --> /home/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs:2584:8
+                // --> $CARGO/serde_json-1.0.64/src/de.rs:2584:8
+                if normalize_cargo_registry(&mut line, indent) {
+                    other_crate = true;
+                    if self.normalization >= DependencyVersion {
+                        let rest = &line[indent + 11..];
+                        let end_of_version = rest.find('/');
+                        if let Some(end_of_crate_name) = end_of_version
+                            .and_then(|end| rest[..end].find('.'))
+                            .and_then(|end| rest[..end].rfind('-'))
+                        {
+                            line.replace_range(
+                                indent + end_of_crate_name + 12
+                                    ..indent + end_of_version.unwrap() + 11,
+                                "$VERSION",
+                            );
                         }
                     }
                 }
@@ -470,6 +458,32 @@ impl<'a> Filter<'a> {
 
 fn is_ascii_lowercase_hex(s: &str) -> bool {
     s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+// Matches any cargo registry source path of the form:
+//   .../registry/src/{name}-{16-hex-chars}/...
+// and replaces the prefix up to and including the hash with `$CARGO`.
+// Returns true if a substitution was made.
+fn normalize_cargo_registry(line: &mut String, indent: usize) -> bool {
+    let prefix = "/registry/src/";
+    let Some(pos) = line.find(prefix) else {
+        return false;
+    };
+    let rest = &line[pos + prefix.len()..];
+    let Some(slash) = rest.find('/') else {
+        return false;
+    };
+    let segment = &rest[..slash];
+    let Some(i) = segment.rfind('-') else {
+        return false;
+    };
+    let hash = &segment[i + 1..];
+    if hash.len() != 16 || !is_ascii_lowercase_hex(hash) {
+        return false;
+    }
+    let hash_end = pos + prefix.len() + slash;
+    line.replace_range(indent + 4..hash_end, "$CARGO");
+    true
 }
 
 // "10 | T: Send,"  ->  "   | T: Send,"
@@ -685,4 +699,74 @@ fn indented_line_kind(
     }
 
     IndentedLineKind::Other(if digits == 0 { spaces } else { 0 })
+}
+
+#[cfg(test)]
+mod normalize_cargo_registry_tests {
+    use super::normalize_cargo_registry;
+
+    fn normalize(line: &str, indent: usize) -> Option<String> {
+        let mut line = line.to_owned();
+        if normalize_cargo_registry(&mut line, indent) {
+            Some(line)
+        } else {
+            None
+        }
+    }
+
+    #[test]
+    fn github_registry() {
+        assert_eq!(
+            normalize("   --> /home/user/.cargo/registry/src/github.com-1ecc6299db9ec823/serde_json-1.0.64/src/de.rs", 3),
+            Some(String::from("   --> $CARGO/serde_json-1.0.64/src/de.rs")),
+        );
+    }
+
+    #[test]
+    fn crates_io_registry() {
+        assert_eq!(
+            normalize("   --> /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tokio-1.26.0/src/time/interval.rs", 3),
+            Some(String::from("   --> $CARGO/tokio-1.26.0/src/time/interval.rs")),
+        );
+    }
+
+    #[test]
+    fn custom_registry() {
+        assert_eq!(
+            normalize("   --> /root/.cargo/registry/src/foo-registry.bar.com-3456e42d3d53e27e/tokio-1.26.0/src/time/interval.rs", 3),
+            Some(String::from("   --> $CARGO/tokio-1.26.0/src/time/interval.rs")),
+        );
+    }
+
+    #[test]
+    fn registry_name_with_hyphens() {
+        assert_eq!(
+            normalize("   --> /root/.cargo/registry/src/my-cdn.example.com-abcdef1234567890/serde-1.0.0/src/lib.rs", 3),
+            Some(String::from("   --> $CARGO/serde-1.0.0/src/lib.rs")),
+        );
+    }
+
+    #[test]
+    fn no_match_non_registry_path() {
+        assert_eq!(normalize("   --> /home/user/registry/src/main.rs", 3), None,);
+    }
+
+    #[test]
+    fn no_match_invalid_hash() {
+        assert_eq!(
+            normalize("   --> /home/user/.cargo/registry/src/github.com-notahexhash123456/serde-1.0.0/src/lib.rs", 3),
+            None,
+        );
+    }
+
+    #[test]
+    fn no_match_short_hash() {
+        assert_eq!(
+            normalize(
+                "   --> /home/user/.cargo/registry/src/github.com-1ecc629/serde-1.0.0/src/lib.rs",
+                3
+            ),
+            None,
+        );
+    }
 }
