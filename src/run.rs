@@ -41,6 +41,52 @@ pub(crate) struct PathDependency {
     pub normalized_path: Directory,
 }
 
+fn path_dependencies(
+    source_manifest: &dependencies::Manifest,
+    packages: &[PackageMetadata],
+) -> Vec<PathDependency> {
+    source_manifest
+        .dependencies
+        .iter()
+        .chain(&source_manifest.dev_dependencies)
+        .filter_map(|(name, dep)| {
+            let path = dep.path.as_ref()?;
+            if packages.iter().any(|p| &p.name == name) {
+                None
+            } else {
+                Some(PathDependency {
+                    name: name.clone(),
+                    normalized_path: path.canonicalize().ok()?,
+                })
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod path_dependency_tests {
+    use super::path_dependencies;
+    use crate::dependencies;
+
+    #[test]
+    fn includes_dev_dependencies() {
+        let manifest = toml::from_str::<dependencies::Manifest>(
+            r#"
+                [package]
+                name = "test"
+
+                [dev-dependencies]
+                some-library = { path = "." }
+            "#,
+        )
+        .unwrap();
+
+        let path_dependencies = path_dependencies(&manifest, &[]);
+        assert_eq!(path_dependencies.len(), 1);
+        assert_eq!(path_dependencies[0].name, "some-library");
+    }
+}
+
 struct Report {
     failures: usize,
     created_wip: usize,
@@ -130,22 +176,7 @@ impl Runner {
 
         let mut features = features::find();
 
-        let path_dependencies = source_manifest
-            .dependencies
-            .iter()
-            .filter_map(|(name, dep)| {
-                let path = dep.path.as_ref()?;
-                if packages.iter().any(|p| &p.name == name) {
-                    // Skip path dependencies coming from the workspace itself
-                    None
-                } else {
-                    Some(PathDependency {
-                        name: name.clone(),
-                        normalized_path: path.canonicalize().ok()?,
-                    })
-                }
-            })
-            .collect();
+        let path_dependencies = path_dependencies(&source_manifest, &packages);
 
         let crate_name = &source_manifest.package.name;
         let project_dir = path!(target_dir / "tests" / "trybuild" / crate_name /);
