@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::{env, io, iter};
-use target_triple::TARGET;
+use target_tuple::TARGET;
 
 #[derive(Deserialize)]
 pub(crate) struct Metadata {
@@ -202,7 +202,7 @@ fn features(project: &Project) -> Vec<String> {
 
 fn target() -> Vec<&'static str> {
     // When --target flag is passed, cargo does not pass RUSTFLAGS to rustc when
-    // building proc-macro and build script even if the host and target triples
+    // building proc-macro and build script even if the host and target tuples
     // are the same. Therefore, if we always pass --target to cargo, tools such
     // as coverage that require RUSTFLAGS do not work for tests run by trybuild.
     //
