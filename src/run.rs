@@ -296,6 +296,23 @@ impl Runner {
             }
         }
 
+        let mut workspace_dependencies = workspace_manifest.workspace.dependencies;
+        workspace_dependencies.retain(|name, _| {
+            if let Some(dep) = dependencies.get(name)
+                && dep.workspace
+            {
+                return true;
+            }
+            for target in targets.values() {
+                if let Some(dep) = target.dependencies.get(name)
+                    && dep.workspace
+                {
+                    return true;
+                }
+            }
+            false
+        });
+
         let mut manifest = Manifest {
             cargo_features: source_manifest.cargo_features,
             package: Package {
@@ -310,7 +327,7 @@ impl Runner {
             target: targets,
             bins: Vec::new(),
             workspace: Some(Workspace {
-                dependencies: workspace_manifest.workspace.dependencies,
+                dependencies: workspace_dependencies,
             }),
             // Within a workspace, only the [patch] and [replace] sections in
             // the workspace root's Cargo.toml are applied by Cargo.
