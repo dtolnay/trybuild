@@ -51,6 +51,7 @@ fn cargo_with_rustflags(project: &Project, extra_rustflags: &[&'static str]) -> 
     let rustflags = rustflags::toml(extra_rustflags);
     cmd.arg(format!("--config=build.rustflags={rustflags}"));
     cmd.arg(format!("--config=target.{TARGET}.rustflags={rustflags}"));
+    cmd.arg(format!("--config=term.verbose=true"));
 
     cmd
 }
