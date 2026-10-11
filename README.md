@@ -245,6 +245,22 @@ components = ["rust-src"]
 
 <br>
 
+## Avoid directory traversal
+
+If you re-use the failing `.rs` files, have them (and their respective
+`.stderr` files) positioned so that `t.compile_fail(...)` accesses them only
+in subdirectories ("sub/sub/dir/test01.rs"), and not involving any parent
+traversal ("../neighbor-dir/tests01.rs"). Otherwise the generated `.stderr`
+files may include absolute resolved paths, and they may fail in different
+environment.
+
+Alternatively, create symlinks that involve any parent traversal "..". Have
+those symlinks themselves located under a (sub-sub...)directory of where you
+invoke `t.compile_fail(...)`, so that the path you pass to
+`t.compile_fail(...)` itself does not include any "..".
+
+<br>
+
 #### License
 
 <sup>
