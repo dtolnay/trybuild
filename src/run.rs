@@ -313,8 +313,17 @@ impl Runner {
             false
         });
 
+        // Profiles from the workspace root may rely on unstable features
+        // enabled there
+        let mut cargo_features = source_manifest.cargo_features;
+        for feature in workspace_manifest.cargo_features {
+            if !cargo_features.contains(&feature) {
+                cargo_features.push(feature);
+            }
+        }
+
         let mut manifest = Manifest {
-            cargo_features: source_manifest.cargo_features,
+            cargo_features,
             package: Package {
                 name: project_name.to_owned(),
                 version: "0.0.0".to_owned(),
@@ -329,8 +338,9 @@ impl Runner {
             workspace: Some(Workspace {
                 dependencies: workspace_dependencies,
             }),
-            // Within a workspace, only the [patch] and [replace] sections in
-            // the workspace root's Cargo.toml are applied by Cargo.
+            // Within a workspace, only the [profile], [patch] and [replace]
+            // sections in the workspace root's Cargo.toml are applied by Cargo.
+            profile: workspace_manifest.profile,
             patch: workspace_manifest.patch,
             replace: workspace_manifest.replace,
         };

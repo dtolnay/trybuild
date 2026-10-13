@@ -75,8 +75,12 @@ fn fix_replacements(replacements: &mut Map<String, Patch>, dir: &Directory) {
 
 #[derive(Deserialize, Default, Debug)]
 pub(crate) struct WorkspaceManifest {
+    #[serde(rename = "cargo-features", default)]
+    pub cargo_features: Vec<String>,
     #[serde(default)]
     pub workspace: WorkspaceWorkspace,
+    #[serde(default)]
+    pub profile: Map<String, Value>,
     #[serde(default)]
     pub patch: Map<String, RegistryPatch>,
     #[serde(default)]
