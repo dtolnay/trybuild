@@ -105,6 +105,13 @@
 //!
 //! That's the entire API.
 //!
+//! ## Conditional compilation
+//!
+//! Trybuild sets `cfg(trybuild)` when compiling test cases. In a test case,
+//! use `#[cfg(trybuild)]` to include code in these compilations, or
+//! `#[cfg(not(trybuild))]` to exclude it. Trybuild does not set this cfg for
+//! the outer test harness that calls `TestCases`.
+//!
 //! <br>
 //!
 //! # Workflow
