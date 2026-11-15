@@ -2,8 +2,8 @@ use std::env;
 
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
-pub(crate) fn toml(extra_rustflags: &[&'static str]) -> toml::Value {
-    let mut rustflags = vec!["--cfg", "trybuild", "--verbose"];
+pub(crate) fn toml() -> toml::Value {
+    let mut rustflags = vec!["--cfg", "trybuild", "--verbose", "--diagnostic-width=140"];
 
     for &lint in IGNORED_LINTS {
         rustflags.push("-A");
@@ -17,8 +17,6 @@ pub(crate) fn toml(extra_rustflags: &[&'static str]) -> toml::Value {
             rustflags.extend(["-C", "instrument-coverage"]);
         }
     }
-
-    rustflags.extend(extra_rustflags);
 
     toml::Value::try_from(rustflags).unwrap()
 }
