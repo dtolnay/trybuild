@@ -1,6 +1,7 @@
 use crate::dependencies::{Dependency, Patch, RegistryPatch, TargetDependencies};
 use serde::ser::{SerializeMap, Serializer};
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap as Map;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -19,6 +20,8 @@ pub(crate) struct Manifest {
     pub bins: Vec<Bin>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace: Option<Workspace>,
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub profile: Map<String, Value>,
     #[serde(
         serialize_with = "serialize_patch",
         skip_serializing_if = "empty_patch"
