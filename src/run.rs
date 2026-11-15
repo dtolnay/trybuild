@@ -73,7 +73,7 @@ impl Runner {
 
         if tests.is_empty() {
             message::no_tests_enabled();
-        } else if project.keep_going && !project.has_pass {
+        } else if project.keep_going {
             report = match self.run_all(&project, tests) {
                 Ok(failures) => failures,
                 Err(err) => {
@@ -378,8 +378,8 @@ impl Runner {
         let parsed = parse_cargo_json(project, &output.stdout, &path_map);
         let fallback = Stderr::default();
 
+        let show_expected = project.has_pass && project.has_compile_fail;
         for mut t in tests {
-            let show_expected = false;
             message::begin_test(&t.test, show_expected);
 
             if t.error.is_none() {
