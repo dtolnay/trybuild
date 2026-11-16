@@ -33,6 +33,7 @@ pub(crate) struct Project {
     pub path_dependencies: Vec<PathDependency>,
     manifest: Manifest,
     pub keep_going: bool,
+    pub zthreads: bool,
 }
 
 #[derive(Debug)]
@@ -52,7 +53,7 @@ impl Runner {
         let mut tests = expand_globs(&self.tests);
         filter(&mut tests);
 
-        let (project, _lock) = (|| {
+        let (mut project, _lock) = (|| {
             let mut project = self.prepare(&tests)?;
             let lock = Lock::acquire(path!(project.dir / ".lock"))?;
             self.write(&mut project)?;
@@ -62,6 +63,8 @@ impl Runner {
             message::prepare_fail(err);
             panic!("tests failed");
         });
+
+        project.zthreads = cargo::zthreads_supported(&project);
 
         print!("\n\n");
 
@@ -195,6 +198,7 @@ impl Runner {
             path_dependencies,
             manifest,
             keep_going: false,
+            zthreads: false,
         })
     }
 
