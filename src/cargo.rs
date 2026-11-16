@@ -4,10 +4,12 @@ use crate::manifest::Name;
 use crate::run::Project;
 use crate::rustflags;
 use serde_derive::Deserialize;
+use std::ffi::OsStr;
 use std::fs::File;
+use std::io::{self, IsTerminal as _};
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, io, iter, thread};
+use std::{env, iter, thread};
 use target_tuple::TARGET;
 
 #[derive(Deserialize)]
@@ -43,6 +45,10 @@ fn cargo(project: &Project) -> Command {
     cmd.env_remove("RUSTFLAGS");
     cmd.env("CARGO_INCREMENTAL", "0");
     cmd.arg("--offline");
+
+    if color() {
+        cmd.arg(r#"--config=term.color="always""#);
+    }
 
     let rustflags = rustflags::toml();
     cmd.arg(format!("--config=build.rustflags={rustflags}"));
@@ -229,4 +235,22 @@ fn target() -> Vec<&'static str> {
     } else {
         vec!["--target", TARGET]
     }
+}
+
+fn color() -> bool {
+    if !io::stderr().is_terminal() {
+        return false;
+    }
+
+    if let Some(no_color) = env::var_os("NO_COLOR")
+        && !no_color.is_empty()
+    {
+        return false;
+    }
+
+    if env::var_os("TERM").as_deref() == Some(OsStr::new("dumb")) {
+        return false;
+    }
+
+    true
 }
