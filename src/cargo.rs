@@ -7,7 +7,7 @@ use serde_derive::Deserialize;
 use std::fs::File;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
-use std::{env, io, iter};
+use std::{env, io, iter, thread};
 use target_tuple::TARGET;
 
 #[derive(Deserialize)]
@@ -96,7 +96,21 @@ pub(crate) fn build_dependencies(project: &mut Project) -> Result<()> {
         .arg(&project.name)
         .args(features(project));
 
-    let status = command.status().map_err(Error::Cargo)?;
+    let status = if let Ok((mut pipe_reader, pipe_writer)) = io::pipe() {
+        command.stderr(pipe_writer);
+        let mut child = command.spawn().map_err(Error::Cargo)?;
+        command.stderr(Stdio::null());
+        thread::scope(|s| {
+            s.spawn(move || {
+                let _ = io::copy(&mut pipe_reader, &mut io::stderr());
+            });
+            child.wait()
+        })
+    } else {
+        command.stderr(Stdio::null()).status()
+    };
+
+    let status = status.map_err(Error::Cargo)?;
     if !status.success() {
         return Err(Error::CargoFail);
     }
