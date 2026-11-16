@@ -1,8 +1,9 @@
+use crate::run::Project;
 use std::env;
 
 const IGNORED_LINTS: &[&str] = &["dead_code"];
 
-pub(crate) fn toml() -> toml::Value {
+pub(crate) fn toml(project: &Project, extra_rustflags: &[&str]) -> toml::Value {
     let mut rustflags = vec!["--cfg", "trybuild", "--verbose", "--diagnostic-width=140"];
 
     for &lint in IGNORED_LINTS {
@@ -17,6 +18,12 @@ pub(crate) fn toml() -> toml::Value {
             rustflags.extend(["-C", "instrument-coverage"]);
         }
     }
+
+    if project.zthreads {
+        rustflags.push("-Zthreads=1");
+    }
+
+    rustflags.extend_from_slice(extra_rustflags);
 
     toml::Value::try_from(rustflags).unwrap()
 }

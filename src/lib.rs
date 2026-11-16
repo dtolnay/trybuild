@@ -251,6 +251,7 @@
     clippy::range_plus_one,
     clippy::similar_names,
     clippy::single_match_else,
+    clippy::struct_excessive_bools,
     clippy::test_attr_in_doctest,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,

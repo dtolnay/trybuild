@@ -39,6 +39,10 @@ fn raw_cargo() -> Command {
 }
 
 fn cargo(project: &Project) -> Command {
+    cargo_with_rustflags(project, &[])
+}
+
+fn cargo_with_rustflags(project: &Project, extra_rustflags: &[&str]) -> Command {
     let mut cmd = raw_cargo();
     cmd.current_dir(&project.dir);
     cmd.envs(cargo_target_dir(project));
@@ -50,7 +54,7 @@ fn cargo(project: &Project) -> Command {
         cmd.arg(r#"--config=term.color="always""#);
     }
 
-    let rustflags = rustflags::toml();
+    let rustflags = rustflags::toml(project, extra_rustflags);
     cmd.arg(format!("--config=build.rustflags={rustflags}"));
     cmd.arg(format!("--config=target.{TARGET}.rustflags={rustflags}"));
 
@@ -62,6 +66,19 @@ fn cargo_target_dir(project: &Project) -> impl Iterator<Item = (&'static str, Pa
         "CARGO_TARGET_DIR",
         path!(project.target_dir / "tests" / "trybuild"),
     ))
+}
+
+pub(crate) fn zthreads_supported(project: &Project) -> bool {
+    let Ok(output) = cargo_with_rustflags(project, &["-Zthreads=1", "--print=xxx"])
+        .arg("rustc")
+        .output()
+    else {
+        return false;
+    };
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    stderr.contains("unknown print request: `xxx`")
+        && !stderr.contains("the option `Z` is only accepted on the nightly compiler")
 }
 
 pub(crate) fn manifest_dir() -> Result<Directory> {
