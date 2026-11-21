@@ -372,15 +372,15 @@ impl Runner {
             created_wip: 0,
         };
 
-        let mut path_map = Map::new();
+        let mut targets = Map::new();
         for t in &tests {
             let src_path = CanonicalPath::new(&project.source_dir.join(&t.test.path));
-            path_map.insert(src_path, (&t.name, &t.test));
+            targets.insert(t.name.0.as_str(), (src_path, &t.test));
         }
 
         let output = cargo::build_all_tests(project)?;
-        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
-        let fallback = Stderr::default();
+        let parsed = parse_cargo_json(project, &output.stdout, &targets);
+        let fallback = TargetOutput::default();
 
         for mut t in tests {
             let show_expected = false;
@@ -391,9 +391,11 @@ impl Runner {
             }
 
             if t.error.is_none() {
-                let src_path = CanonicalPath::new(&project.source_dir.join(&t.test.path));
-                let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
-                match t.test.check(project, &t.name, this_test, "") {
+                let this_test = parsed.targets.get(&t.name.0).unwrap_or(&fallback);
+                match t
+                    .test
+                    .check(project, &t.name, this_test, output.status.success(), "")
+                {
                     Ok(Outcome::Passed) => {}
                     Ok(Outcome::CreatedWip) => report.created_wip += 1,
                     Err(error) => t.error = Some(error),
@@ -421,22 +423,29 @@ impl Test {
         message::begin_test(self, show_expected);
         check_exists(&self.path)?;
 
-        let mut path_map = Map::new();
+        let mut targets = Map::new();
         let src_path = CanonicalPath::new(&project.source_dir.join(&self.path));
-        path_map.insert(src_path.clone(), (name, self));
+        targets.insert(name.0.as_str(), (src_path, self));
 
         let output = cargo::build_test(project, name)?;
-        let parsed = parse_cargo_json(project, &output.stdout, &path_map);
-        let fallback = Stderr::default();
-        let this_test = parsed.stderrs.get(&src_path).unwrap_or(&fallback);
-        self.check(project, name, this_test, &parsed.stdout)
+        let parsed = parse_cargo_json(project, &output.stdout, &targets);
+        let fallback = TargetOutput::default();
+        let this_test = parsed.targets.get(&name.0).unwrap_or(&fallback);
+        self.check(
+            project,
+            name,
+            this_test,
+            output.status.success(),
+            &parsed.stdout,
+        )
     }
 
     fn check(
         &self,
         project: &Project,
         name: &Name,
-        result: &Stderr,
+        result: &TargetOutput,
+        build_succeeded: bool,
         build_stdout: &str,
     ) -> Result<Outcome> {
         let check = match self.expected {
@@ -448,7 +457,7 @@ impl Test {
             self,
             project,
             name,
-            result.success,
+            result.success(build_succeeded)?,
             build_stdout,
             &result.stderr,
         )
@@ -604,20 +613,22 @@ fn filter(tests: &mut Vec<ExpandedTest>) {
 
 #[derive(Deserialize)]
 struct CargoMessage {
-    #[allow(dead_code)]
     reason: Reason,
     target: RustcTarget,
-    message: RustcMessage,
+    message: Option<RustcMessage>,
 }
 
 #[derive(Deserialize)]
 enum Reason {
     #[serde(rename = "compiler-message")]
     CompilerMessage,
+    #[serde(rename = "compiler-artifact")]
+    CompilerArtifact,
 }
 
 #[derive(Deserialize)]
 struct RustcTarget {
+    name: String,
     src_path: PathBuf,
 }
 
@@ -629,19 +640,26 @@ struct RustcMessage {
 
 struct ParsedOutputs {
     stdout: String,
-    stderrs: Map<CanonicalPath, Stderr>,
+    targets: Map<String, TargetOutput>,
 }
 
-struct Stderr {
-    success: bool,
+#[derive(Default)]
+struct TargetOutput {
+    has_artifact: bool,
+    has_error: bool,
     stderr: Variations,
 }
 
-impl Default for Stderr {
-    fn default() -> Self {
-        Stderr {
-            success: true,
-            stderr: Variations::default(),
+impl TargetOutput {
+    fn success(&self, build_succeeded: bool) -> Result<bool> {
+        if self.has_error {
+            Ok(false)
+        } else if build_succeeded || self.has_artifact {
+            Ok(true)
+        } else {
+            // A proc macro can terminate rustc without emitting an error. In a
+            // batch build, successful sibling targets still produce artifacts.
+            Err(Error::NoCompilerDiagnostic)
         }
     }
 }
@@ -649,7 +667,7 @@ impl Default for Stderr {
 fn parse_cargo_json(
     project: &Project,
     stdout: &[u8],
-    path_map: &Map<CanonicalPath, (&Name, &Test)>,
+    targets: &Map<&str, (CanonicalPath, &Test)>,
 ) -> ParsedOutputs {
     let mut map = Map::new();
     let mut nonmessage_stdout = String::new();
@@ -674,20 +692,28 @@ fn parse_cargo_json(
             // a short-lived bug.
             continue;
         }
-        if let Ok(de) = serde_json::from_str::<CargoMessage>(message) {
-            if de.message.level != "failure-note" {
-                let src_path = CanonicalPath::new(&de.target.src_path);
-                let Some((name, test)) = path_map.get(&src_path) else {
-                    continue;
-                };
-                let entry = map.entry(src_path).or_insert_with(Stderr::default);
-                if de.message.level == "error" {
-                    entry.success = false;
+        let Ok(de) = serde_json::from_str::<CargoMessage>(message) else {
+            continue;
+        };
+        let Some((name, (src_path, test))) = targets.get_key_value(de.target.name.as_str()) else {
+            continue;
+        };
+        if CanonicalPath::new(&de.target.src_path) != *src_path {
+            continue;
+        }
+        let entry = map
+            .entry(de.target.name)
+            .or_insert_with(TargetOutput::default);
+        match (de.reason, de.message) {
+            (Reason::CompilerArtifact, _) => entry.has_artifact = true,
+            (Reason::CompilerMessage, Some(message)) if message.level != "failure-note" => {
+                if message.level == "error" {
+                    entry.has_error = true;
                 }
                 let normalized = normalize::diagnostics(
-                    &de.message.rendered,
+                    &message.rendered,
                     Context {
-                        krate: &name.0,
+                        krate: name,
                         source_dir: &project.source_dir,
                         workspace: &project.workspace,
                         input_file: &test.path,
@@ -697,11 +723,51 @@ fn parse_cargo_json(
                 );
                 entry.stderr.concat(&normalized);
             }
+            _ => {}
         }
     }
     nonmessage_stdout.push_str(remaining);
     ParsedOutputs {
         stdout: nonmessage_stdout,
-        stderrs: map,
+        targets: map,
     }
+}
+
+#[test]
+fn failed_build_without_error_diagnostic() {
+    let project = Runner { tests: Vec::new() }.prepare(&[]).unwrap();
+    let test = Test {
+        path: PathBuf::from("case.rs"),
+        expected: Expected::CompileFail,
+    };
+    let path = CanonicalPath::new(&test.path);
+    let targets = Map::from([("trybuild000", (path, &test))]);
+    let result = |messages: &str| {
+        let mut parsed = parse_cargo_json(&project, messages.as_bytes(), &targets);
+        parsed
+            .targets
+            .remove("trybuild000")
+            .unwrap_or_default()
+            .success(false)
+    };
+
+    let target = r#""target":{"name":"trybuild000","src_path":"case.rs"}"#;
+    let artifact = format!(r#"{{"reason":"compiler-artifact",{target}}}"#);
+    let diagnostic = |level| {
+        format!(
+            r#"{{"reason":"compiler-message",{target},"message":{{"level":"{level}","rendered":"{level}"}}}}"#
+        )
+    };
+
+    assert!(matches!(result(""), Err(Error::NoCompilerDiagnostic)));
+    // A warning or an artifact for another target does not establish success.
+    let other_name = artifact.replace("trybuild000", "other");
+    let other_file = artifact.replace("case.rs", "other.rs");
+    let messages = [diagnostic("warning"), other_name, other_file].join("\n");
+    assert!(matches!(
+        result(&messages),
+        Err(Error::NoCompilerDiagnostic)
+    ));
+    assert!(result(&artifact).unwrap());
+    assert!(!result(&diagnostic("error")).unwrap());
 }

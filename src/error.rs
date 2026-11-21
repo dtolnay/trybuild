@@ -13,6 +13,7 @@ pub(crate) enum Error {
     Io(io::Error),
     Metadata(serde_json::Error),
     Mismatch,
+    NoCompilerDiagnostic,
     NoWorkspaceManifest,
     Open(PathBuf, io::Error),
     Pattern(PatternError),
@@ -40,6 +41,9 @@ impl Display for Error {
             Io(e) => write!(f, "{}", e),
             Metadata(e) => write!(f, "failed to read cargo metadata: {}", e),
             Mismatch => write!(f, "compiler error does not match expected error"),
+            NoCompilerDiagnostic => {
+                write!(f, "compilation failed without a compiler error diagnostic")
+            }
             NoWorkspaceManifest => write!(
                 f,
                 "Cargo.toml uses edition.workspace=true, but no edition found in workspace's manifest",
